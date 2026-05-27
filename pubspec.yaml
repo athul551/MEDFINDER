@@ -1,0 +1,43 @@
+name: medicine_availability_finder
+description: A Flutter app for finding nearby pharmacies with medicine availability.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cloud_firestore: ^5.6.0
+  cupertino_icons: ^1.0.8
+  firebase_auth: ^5.3.4
+  firebase_core: ^3.9.0
+  firebase_messaging: ^15.1.6
+  firebase_storage: ^12.3.7
+  geolocator: ^13.0.2
+  google_maps_flutter: ^2.10.0
+  image_picker: ^1.1.2
+  intl: ^0.20.1
+  provider: ^6.1.2
+  url_launcher: ^6.3.1
+  path_provider: ^2.0.0
+
+dev_dependencies:
+  flutter_lints: ^5.0.0
+  flutter_test:
+    sdk: flutter
+  flutter_launcher_icons: ^0.10.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - web/icons/my/flutter.png
+    - assets/images/medfinder_logo.png
+
+# Configuration for flutter_launcher_icons
+flutter_icons:
+  android: true
+  ios: true
+  image_path: assets/images/medfinder_logo.png
+  remove_alpha_ios: true

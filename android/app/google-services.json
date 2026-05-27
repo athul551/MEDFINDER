@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "244216896549",
+    "project_id": "medfinder-ef4f1",
+    "storage_bucket": "medfinder-ef4f1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:244216896549:android:564e9db494f74a21c073cc",
+        "android_client_info": {
+          "package_name": "com.example.medicine_availability_finder"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDdUwNKtPPwigvAWdBlxxvrnd-29LaOqKE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

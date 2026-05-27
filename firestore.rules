@@ -1,0 +1,82 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc(uid) {
+      return get(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function role() {
+      return userDoc(request.auth.uid).data.role;
+    }
+
+    function pharmacyDoc(pharmacyId) {
+      return get(/databases/$(database)/documents/pharmacies/$(pharmacyId));
+    }
+
+    function isAdmin() {
+      return signedIn() && role() == 'admin';
+    }
+
+    function isCustomer() {
+      return signedIn() && role() == 'customer';
+    }
+
+    function isPharmacyOwner() {
+      return signedIn() && role() == 'pharmacyOwner';
+    }
+
+    function ownsPharmacy(pharmacyId) {
+      return isPharmacyOwner()
+        && pharmacyDoc(pharmacyId).data.ownerId == request.auth.uid;
+    }
+
+    match /users/{uid} {
+      allow create: if signedIn() && request.auth.uid == uid;
+      allow read, update: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /pharmacies/{pharmacyId} {
+      allow read: if signedIn();
+      allow create: if isPharmacyOwner()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isAdmin()
+        || (isPharmacyOwner() && resource.data.ownerId == request.auth.uid);
+      allow delete: if isAdmin();
+    }
+
+    match /medicines/{medicineId} {
+      allow read: if signedIn();
+      allow create, update, delete: if isAdmin() || isPharmacyOwner();
+    }
+
+    match /stock/{stockId} {
+      allow read: if signedIn();
+      allow create: if ownsPharmacy(request.resource.data.pharmacyId);
+      allow update: if ownsPharmacy(resource.data.pharmacyId);
+      allow delete: if isAdmin();
+    }
+
+    match /reservations/{reservationId} {
+      allow create: if isCustomer()
+        && request.resource.data.userId == request.auth.uid;
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid)
+        || ownsPharmacy(resource.data.pharmacyId);
+      allow update: if isAdmin() || ownsPharmacy(resource.data.pharmacyId);
+      allow delete: if isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow create: if signedIn();
+      allow read, update: if signedIn()
+        && resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+  }
+}
