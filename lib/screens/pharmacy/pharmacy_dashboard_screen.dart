@@ -101,6 +101,20 @@ class _StockOverview extends StatelessWidget {
               ),
             ),
           ),
+          PopupMenuButton(
+            itemBuilder: (context) => [
+              PopupMenuItem(
+                child: const Row(
+                  children: [
+                    Icon(Icons.delete_outline, color: Colors.red),
+                    SizedBox(width: 8),
+                    Text('Delete pharmacy', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+                onTap: () => _showDeletePharmacyConfirmation(context, pharmacy),
+              ),
+            ],
+          ),
         ],
       ),
       body: ListView(
@@ -147,11 +161,29 @@ class _StockOverview extends StatelessWidget {
                 children: stock.map((item) {
                   return StockCard(
                     stock: item,
-                    trailing: Switch(
-                      value: item.isAvailable,
-                      onChanged: (value) => context
-                          .read<PharmacyProvider>()
-                          .setAvailability(item.stockId, value),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined),
+                          tooltip: 'Edit stock',
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AddEditMedicineScreen(
+                                pharmacy: pharmacy,
+                                stockItem: item,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Switch(
+                          value: item.isAvailable,
+                          onChanged: (value) => context
+                              .read<PharmacyProvider>()
+                              .setAvailability(item.stockId, value),
+                        ),
+                      ],
                     ),
                     onTap: () => Navigator.push(
                       context,
@@ -178,6 +210,46 @@ class _StockOverview extends StatelessWidget {
             builder: (_) => AddEditMedicineScreen(pharmacy: pharmacy),
           ),
         ),
+      ),
+    );
+  }
+
+  void _showDeletePharmacyConfirmation(BuildContext context, Pharmacy pharmacy) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete pharmacy?'),
+        content: const Text(
+          'This will permanently delete your pharmacy and all associated data including stock and reservations. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                final auth = context.read<AppAuthProvider>();
+                // Delete account - this will set appUser to null
+                await auth.deleteAccount();
+                // AuthGate will automatically handle the navigation to login
+              } catch (error) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to delete pharmacy: $error'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
       ),
     );
   }

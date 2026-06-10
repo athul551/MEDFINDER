@@ -25,6 +25,7 @@ class AuthService {
     if (user.isAnonymous) {
       return _createGuestProfile(user);
     }
+    await _auth.signOut();
     return null;
   }
 
@@ -110,6 +111,7 @@ class AuthService {
     );
     final appUser = await _firestoreService.getUser(credential.user!.uid);
     if (appUser == null) {
+      await _auth.signOut();
       throw FirebaseAuthException(
         code: 'missing-user-profile',
         message: 'No app profile exists for this account.',
@@ -141,6 +143,39 @@ class AuthService {
 
   Future<void> sendPasswordReset(String email) {
     return _auth.sendPasswordResetEmail(email: email.trim());
+  }
+
+  Future<void> deleteUser(String userId) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser?.uid != userId) {
+      await _deleteFirestoreAccountData(userId);
+      return;
+    }
+
+    await _deleteFirestoreAccountData(userId);
+
+    try {
+      await currentUser!.delete();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        await _auth.signOut();
+        throw FirebaseAuthException(
+          code: 'requires-recent-login',
+          message: 'Your session has expired. Please sign in again and try '
+              'deleting your account.',
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _deleteFirestoreAccountData(String userId) async {
+    final pharmacy = await _firestoreService.getPharmacyByOwnerId(userId);
+    if (pharmacy != null) {
+      await _firestoreService.deletePharmacy(pharmacy.pharmacyId);
+    }
+
+    await _firestoreService.deleteUser(userId);
   }
 
   Future<void> signOut() => _auth.signOut();

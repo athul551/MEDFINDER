@@ -8,13 +8,16 @@ import '../services/firestore_service.dart';
 import '../utils/app_constants.dart';
 
 class AppAuthProvider extends ChangeNotifier {
-  AppAuthProvider({AuthService? authService, FirestoreService? firestoreService})
-      : _authService = authService ?? AuthService(),
+  AppAuthProvider({
+    AuthService? authService,
+    FirestoreService? firestoreService,
+  })  : _authService = authService ?? AuthService(),
         _firestoreService = firestoreService ?? FirestoreService();
 
   final AuthService _authService;
   final FirestoreService _firestoreService;
   StreamSubscription? _authSubscription;
+  int _authEventId = 0;
 
   AppUser? appUser;
   bool isLoading = true;
@@ -25,16 +28,23 @@ class AppAuthProvider extends ChangeNotifier {
 
   void start() {
     _authSubscription ??= _authService.authStateChanges.listen((user) async {
+      final eventId = ++_authEventId;
       isLoading = true;
       notifyListeners();
       try {
-        appUser = user == null ? null : await _authService.currentAppUser();
+        final loadedUser =
+            user == null ? null : await _authService.currentAppUser();
+        if (eventId != _authEventId) return;
+        appUser = loadedUser;
         errorMessage = null;
       } catch (error) {
+        if (eventId != _authEventId) return;
         errorMessage = error.toString();
       } finally {
-        isLoading = false;
-        notifyListeners();
+        if (eventId == _authEventId) {
+          isLoading = false;
+          notifyListeners();
+        }
       }
     });
   }
@@ -99,6 +109,14 @@ class AppAuthProvider extends ChangeNotifier {
     await _authService.signOut();
     appUser = null;
     notifyListeners();
+  }
+
+  Future<void> deleteAccount() async {
+    if (appUser == null) return;
+    await _run(() async {
+      await _authService.deleteUser(appUser!.uid);
+      appUser = null;
+    });
   }
 
   Future<void> updateProfileImage(String imageUrl) async {

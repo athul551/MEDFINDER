@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models/pharmacy.dart';
@@ -43,19 +44,32 @@ class PharmacyDetailsScreen extends StatelessWidget {
             height: 220,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: GoogleMap(
-                initialCameraPosition: CameraPosition(
-                  target: position,
-                  zoom: 15,
-                ),
-                markers: {
-                  Marker(
-                    markerId: MarkerId(pharmacy.pharmacyId),
-                    position: position,
-                    infoWindow: InfoWindow(title: pharmacy.name),
-                  ),
-                },
-              ),
+              child: kIsWeb
+                  ? Container(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: Text(
+                            'Map is not available in web builds. Use "Open Maps" to view location.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    )
+                  : GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: position,
+                        zoom: 15,
+                      ),
+                      markers: {
+                        Marker(
+                          markerId: MarkerId(pharmacy.pharmacyId),
+                          position: position,
+                          infoWindow: InfoWindow(title: pharmacy.name),
+                        ),
+                      },
+                    ),
             ),
           ),
           const SizedBox(height: 16),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/customer_provider.dart';
+import '../../screens/customer/medicine_hunt_screen.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/stock_card.dart';
@@ -159,7 +160,7 @@ class _MedicineSearchScreenState
               boxShadow: [
                 BoxShadow(
                   color:
-                      Colors.teal.withOpacity(0.25),
+                      Colors.teal.withAlpha((0.25 * 255).round()),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -191,8 +192,7 @@ class _MedicineSearchScreenState
                       Text(
                         "Find nearby pharmacies with available medicine stock instantly.",
                         style: TextStyle(
-                          color: Colors.white
-                              .withOpacity(0.9),
+                          color: Colors.white.withAlpha((0.9 * 255).round()),
                           height: 1.5,
                         ),
                       ),
@@ -207,7 +207,7 @@ class _MedicineSearchScreenState
 
                   decoration: BoxDecoration(
                     color:
-                        Colors.white.withOpacity(0.12),
+                        Colors.white.withAlpha((0.12 * 255).round()),
                     shape: BoxShape.circle,
                   ),
 
@@ -237,7 +237,7 @@ class _MedicineSearchScreenState
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black
-                        .withOpacity(0.04),
+                        .withAlpha((0.04 * 255).round()),
                     blurRadius: 12,
                     offset: const Offset(0, 5),
                   ),
@@ -322,7 +322,7 @@ class _MedicineSearchScreenState
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black
-                        .withOpacity(0.04),
+                        .withAlpha((0.04 * 255).round()),
                     blurRadius: 10,
                   ),
                 ],
@@ -336,8 +336,7 @@ class _MedicineSearchScreenState
 
                     leading: CircleAvatar(
                       backgroundColor:
-                          Colors.teal.withOpacity(
-                              0.1),
+                          Colors.teal.withAlpha((0.1 * 255).round()),
 
                       child: Icon(
                         Icons.medication,
@@ -366,6 +365,25 @@ class _MedicineSearchScreenState
               ),
             ),
 
+          const SizedBox(height: 10),
+          if (_searchController.text.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: FilledButton.icon(
+                icon: const Icon(Icons.local_shipping_outlined),
+                label: const Text('Use Medicine Hunt Mode'),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MedicineHuntScreen(
+                        query: _searchController.text,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
           const SizedBox(height: 10),
 
           /// RESULTS
@@ -426,15 +444,9 @@ class _MedicineSearchScreenState
                           boxShadow: [
 
                             BoxShadow(
-                              color: Colors.black
-                                  .withOpacity(
-                                      0.04),
-
+                              color: Colors.black.withAlpha((0.04 * 255).round()),
                               blurRadius: 10,
-
-                              offset:
-                                  const Offset(
-                                      0, 5),
+                              offset: const Offset(0, 5),
                             ),
                           ],
                         ),
