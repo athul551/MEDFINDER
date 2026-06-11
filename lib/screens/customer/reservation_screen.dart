@@ -15,6 +15,7 @@ import '../../utils/validators.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_text_field.dart';
 import 'prescription_upload_screen.dart';
+import 'write_review_screen.dart';
 
 class ReservationScreen extends StatefulWidget {
   const ReservationScreen({
@@ -102,10 +103,42 @@ class _ReservationScreenState extends State<ReservationScreen> {
         pickupTime: _pickupTime,
         prescriptionUrl: prescriptionUrl,
       );
-      await firestore.createReservation(reservation);
+      final reservationId = await firestore.createReservation(reservation);
       if (mounted) {
         showAppSnackBar(context, 'Reservation request sent.');
-        Navigator.pop(context);
+        final shouldReview = await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Rate your reservation?'),
+            content: const Text(
+              'Would you like to rate your reservation experience at this pharmacy?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Later'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Rate now'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted) return;
+        if (shouldReview == true) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => WriteReviewScreen(
+                pharmacy: widget.pharmacy,
+                triggerType: ReviewTrigger.reservation,
+                reservationId: reservationId,
+              ),
+            ),
+          );
+        }
+        if (mounted) Navigator.pop(context);
       }
     } catch (error) {
       if (mounted) showAppSnackBar(context, error.toString(), isError: true);

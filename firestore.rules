@@ -41,12 +41,26 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    function isPharmacyRatingUpdate() {
+      return isCustomer()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly([
+            'averageRating',
+            'reviewCount',
+            'availabilityAvg',
+            'pricingAvg',
+            'serviceAvg',
+            'deliveryAvg',
+          ]);
+    }
+
     match /pharmacies/{pharmacyId} {
       allow read: if signedIn();
       allow create: if isPharmacyOwner()
         && request.resource.data.ownerId == request.auth.uid;
       allow update: if isAdmin()
-        || (isPharmacyOwner() && resource.data.ownerId == request.auth.uid);
+        || (isPharmacyOwner() && resource.data.ownerId == request.auth.uid)
+        || isPharmacyRatingUpdate();
       allow delete: if isAdmin();
     }
 
@@ -77,6 +91,31 @@ service cloud.firestore {
       allow read, update: if signedIn()
         && resource.data.userId == request.auth.uid;
       allow delete: if isAdmin();
+    }
+
+    function validReviewRating(value) {
+      return value is int && value >= 1 && value <= 5;
+    }
+
+    function validReviewData() {
+      return request.resource.data.userId == request.auth.uid
+        && request.resource.data.pharmacyId is string
+        && request.resource.data.pharmacyName is string
+        && request.resource.data.userName is string
+        && request.resource.data.triggerType is string
+        && request.resource.data.comment is string
+        && validReviewRating(request.resource.data.overallRating)
+        && validReviewRating(request.resource.data.availabilityRating)
+        && validReviewRating(request.resource.data.pricingRating)
+        && validReviewRating(request.resource.data.serviceRating)
+        && validReviewRating(request.resource.data.deliveryRating);
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if signedIn();
+      allow create: if isCustomer() && validReviewData();
+      allow update, delete: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
     }
   }
 }

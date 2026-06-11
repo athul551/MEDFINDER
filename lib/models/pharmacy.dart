@@ -11,6 +11,12 @@ class Pharmacy {
     required this.longitude,
     required this.isVerified,
     required this.createdAt,
+    this.averageRating = 0,
+    this.reviewCount = 0,
+    this.availabilityAvg = 0,
+    this.pricingAvg = 0,
+    this.serviceAvg = 0,
+    this.deliveryAvg = 0,
   });
 
   final String pharmacyId;
@@ -22,6 +28,12 @@ class Pharmacy {
   final double longitude;
   final bool isVerified;
   final DateTime createdAt;
+  final double averageRating;
+  final int reviewCount;
+  final double availabilityAvg;
+  final double pricingAvg;
+  final double serviceAvg;
+  final double deliveryAvg;
 
   factory Pharmacy.fromMap(Map<String, dynamic> map, {String? id}) {
     return Pharmacy(
@@ -34,6 +46,12 @@ class Pharmacy {
       longitude: (map['longitude'] as num?)?.toDouble() ?? 0,
       isVerified: map['isVerified'] as bool? ?? false,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      averageRating: (map['averageRating'] as num?)?.toDouble() ?? 0,
+      reviewCount: (map['reviewCount'] as num?)?.toInt() ?? 0,
+      availabilityAvg: (map['availabilityAvg'] as num?)?.toDouble() ?? 0,
+      pricingAvg: (map['pricingAvg'] as num?)?.toDouble() ?? 0,
+      serviceAvg: (map['serviceAvg'] as num?)?.toDouble() ?? 0,
+      deliveryAvg: (map['deliveryAvg'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -48,6 +66,12 @@ class Pharmacy {
       'longitude': longitude,
       'isVerified': isVerified,
       'createdAt': Timestamp.fromDate(createdAt),
+      'averageRating': averageRating,
+      'reviewCount': reviewCount,
+      'availabilityAvg': availabilityAvg,
+      'pricingAvg': pricingAvg,
+      'serviceAvg': serviceAvg,
+      'deliveryAvg': deliveryAvg,
     };
   }
 
@@ -58,6 +82,12 @@ class Pharmacy {
     double? latitude,
     double? longitude,
     bool? isVerified,
+    double? averageRating,
+    int? reviewCount,
+    double? availabilityAvg,
+    double? pricingAvg,
+    double? serviceAvg,
+    double? deliveryAvg,
   }) {
     return Pharmacy(
       pharmacyId: pharmacyId,
@@ -69,6 +99,12 @@ class Pharmacy {
       longitude: longitude ?? this.longitude,
       isVerified: isVerified ?? this.isVerified,
       createdAt: createdAt,
+      averageRating: averageRating ?? this.averageRating,
+      reviewCount: reviewCount ?? this.reviewCount,
+      availabilityAvg: availabilityAvg ?? this.availabilityAvg,
+      pricingAvg: pricingAvg ?? this.pricingAvg,
+      serviceAvg: serviceAvg ?? this.serviceAvg,
+      deliveryAvg: deliveryAvg ?? this.deliveryAvg,
     );
   }
 }

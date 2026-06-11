@@ -7,6 +7,7 @@ import '../../services/firestore_service.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/reservation_card.dart';
+import '../../widgets/reservation_review_actions.dart';
 
 class ReservationHistoryScreen extends StatelessWidget {
   const ReservationHistoryScreen({super.key});
@@ -56,7 +57,13 @@ class ReservationHistoryScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   itemCount: reservations.length,
                   itemBuilder: (context, index) {
-                    return ReservationCard(reservation: reservations[index]);
+                    final reservation = reservations[index];
+                    return ReservationCard(
+                      reservation: reservation,
+                      actions: [
+                        ReservationReviewActions(reservation: reservation),
+                      ],
+                    );
                   },
                 );
               },

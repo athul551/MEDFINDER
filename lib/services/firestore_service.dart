@@ -4,6 +4,7 @@ import '../models/app_notification.dart';
 import '../models/app_user.dart';
 import '../models/medicine.dart';
 import '../models/pharmacy.dart';
+import '../models/pharmacy_review.dart';
 import '../models/reservation.dart';
 import '../models/stock_item.dart';
 import '../utils/app_constants.dart';
@@ -28,6 +29,8 @@ class FirestoreService {
       _db.collection(AppCollections.reservations);
   CollectionReference<Map<String, dynamic>> get _notifications =>
       _db.collection(AppCollections.notifications);
+  CollectionReference<Map<String, dynamic>> get _reviews =>
+      _db.collection(AppCollections.reviews);
 
   Future<void> createUser(AppUser user) {
     return _users.doc(user.uid).set(user.toMap());
@@ -59,6 +62,12 @@ class FirestoreService {
     final reservations =
         await _reservations.where('userId', isEqualTo: userId).get();
     for (final doc in reservations.docs) {
+      references.add(doc.reference);
+    }
+
+    // Delete all reviews by this user
+    final reviews = await _reviews.where('userId', isEqualTo: userId).get();
+    for (final doc in reviews.docs) {
       references.add(doc.reference);
     }
 
@@ -115,6 +124,13 @@ class FirestoreService {
       references.add(doc.reference);
     }
 
+    // Delete all reviews for this pharmacy
+    final reviews =
+        await _reviews.where('pharmacyId', isEqualTo: pharmacyId).get();
+    for (final doc in reviews.docs) {
+      references.add(doc.reference);
+    }
+
     await _deleteDocumentReferences(references);
   }
 
@@ -138,6 +154,13 @@ class FirestoreService {
     final doc = await _pharmacies.doc(pharmacyId).get();
     if (!doc.exists || doc.data() == null) return null;
     return Pharmacy.fromMap(doc.data()!, id: doc.id);
+  }
+
+  Stream<Pharmacy?> watchPharmacyById(String pharmacyId) {
+    return _pharmacies.doc(pharmacyId).snapshots().map((snapshot) {
+      if (!snapshot.exists || snapshot.data() == null) return null;
+      return Pharmacy.fromMap(snapshot.data()!, id: snapshot.id);
+    });
   }
 
   Future<Pharmacy?> getPharmacyByOwnerId(String ownerId) async {
@@ -435,5 +458,158 @@ class FirestoreService {
               .map((doc) => AppNotification.fromMap(doc.data(), id: doc.id))
               .toList(),
         );
+  }
+
+  Stream<List<PharmacyReview>> watchReviewsForPharmacy(String pharmacyId) {
+    return _reviews
+        .where('pharmacyId', isEqualTo: pharmacyId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => PharmacyReview.fromMap(doc.data(), id: doc.id))
+              .toList(),
+        );
+  }
+
+  Future<bool> hasExistingReview({
+    required String userId,
+    required String pharmacyId,
+    required ReviewTrigger triggerType,
+    String? reservationId,
+  }) async {
+    Query<Map<String, dynamic>> query = _reviews
+        .where('userId', isEqualTo: userId)
+        .where('pharmacyId', isEqualTo: pharmacyId)
+        .where('triggerType', isEqualTo: triggerType.value);
+
+    if (reservationId != null) {
+      query = query.where('reservationId', isEqualTo: reservationId);
+    }
+
+    final snapshot = await query.limit(1).get();
+    return snapshot.docs.isNotEmpty;
+  }
+
+  Future<bool> canReviewPharmacy({
+    required String userId,
+    required String pharmacyId,
+    required ReviewTrigger triggerType,
+    String? reservationId,
+  }) async {
+    if (await hasExistingReview(
+      userId: userId,
+      pharmacyId: pharmacyId,
+      triggerType: triggerType,
+      reservationId: reservationId,
+    )) {
+      return false;
+    }
+
+    final reservations = await _reservations
+        .where('userId', isEqualTo: userId)
+        .where('pharmacyId', isEqualTo: pharmacyId)
+        .get();
+
+    if (reservations.docs.isEmpty) return false;
+
+    final userReservations = reservations.docs
+        .map((doc) => Reservation.fromMap(doc.data(), id: doc.id))
+        .toList();
+
+    switch (triggerType) {
+      case ReviewTrigger.reservation:
+        if (reservationId == null) return false;
+        return userReservations.any(
+          (reservation) =>
+              reservation.reservationId == reservationId &&
+              reservation.status != ReservationStatus.rejected &&
+              reservation.status != ReservationStatus.cancelled,
+        );
+      case ReviewTrigger.purchase:
+        if (reservationId == null) return false;
+        return userReservations.any(
+          (reservation) =>
+              reservation.reservationId == reservationId &&
+              reservation.status == ReservationStatus.pickedUp,
+        );
+      case ReviewTrigger.visit:
+        return userReservations.any(
+          (reservation) =>
+              reservation.status == ReservationStatus.approved ||
+              reservation.status == ReservationStatus.pickedUp,
+        );
+    }
+  }
+
+  Future<String> createReview(PharmacyReview review) async {
+    final canReview = await canReviewPharmacy(
+      userId: review.userId,
+      pharmacyId: review.pharmacyId,
+      triggerType: review.triggerType,
+      reservationId: review.reservationId,
+    );
+    if (!canReview) {
+      throw Exception('You are not eligible to submit this review.');
+    }
+
+    final doc = _reviews.doc();
+    final saved = PharmacyReview(
+      reviewId: doc.id,
+      pharmacyId: review.pharmacyId,
+      pharmacyName: review.pharmacyName,
+      userId: review.userId,
+      userName: review.userName,
+      triggerType: review.triggerType,
+      reservationId: review.reservationId,
+      overallRating: review.overallRating,
+      availabilityRating: review.availabilityRating,
+      pricingRating: review.pricingRating,
+      serviceRating: review.serviceRating,
+      deliveryRating: review.deliveryRating,
+      comment: review.comment,
+      createdAt: DateTime.now(),
+    );
+
+    await _db.runTransaction((tx) async {
+      final pharmacyRef = _pharmacies.doc(review.pharmacyId);
+      final pharmacySnap = await tx.get(pharmacyRef);
+      if (!pharmacySnap.exists || pharmacySnap.data() == null) {
+        throw Exception('Pharmacy not found');
+      }
+
+      final pharmacy = Pharmacy.fromMap(
+        pharmacySnap.data()!,
+        id: review.pharmacyId,
+      );
+      final newCount = pharmacy.reviewCount + 1;
+      final newAverage = ((pharmacy.averageRating * pharmacy.reviewCount) +
+              saved.overallRating) /
+          newCount;
+      final newAvailability = ((pharmacy.availabilityAvg * pharmacy.reviewCount) +
+              saved.availabilityRating) /
+          newCount;
+      final newPricing = ((pharmacy.pricingAvg * pharmacy.reviewCount) +
+              saved.pricingRating) /
+          newCount;
+      final newService = ((pharmacy.serviceAvg * pharmacy.reviewCount) +
+              saved.serviceRating) /
+          newCount;
+      final newDelivery = ((pharmacy.deliveryAvg * pharmacy.reviewCount) +
+              saved.deliveryRating) /
+          newCount;
+
+      tx.set(doc, saved.toMap());
+      tx.update(pharmacyRef, {
+        'averageRating': double.parse(newAverage.toStringAsFixed(1)),
+        'reviewCount': newCount,
+        'availabilityAvg': double.parse(newAvailability.toStringAsFixed(1)),
+        'pricingAvg': double.parse(newPricing.toStringAsFixed(1)),
+        'serviceAvg': double.parse(newService.toStringAsFixed(1)),
+        'deliveryAvg': double.parse(newDelivery.toStringAsFixed(1)),
+      });
+    });
+
+    return doc.id;
   }
 }

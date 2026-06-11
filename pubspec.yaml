@@ -35,6 +35,7 @@ flutter:
   assets:
     - web/icons/my/flutter.png
     - assets/images/medfinder_logo.png
+    - assets/images/login_background.png
 
 # Configuration for flutter_launcher_icons
 flutter_icons:

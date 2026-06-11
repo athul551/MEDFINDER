@@ -26,6 +26,45 @@ enum UserRole {
   }
 }
 
+enum ReviewTrigger {
+  reservation,
+  purchase,
+  visit;
+
+  String get label {
+    switch (this) {
+      case ReviewTrigger.reservation:
+        return 'Reservation';
+      case ReviewTrigger.purchase:
+        return 'Purchase';
+      case ReviewTrigger.visit:
+        return 'Visit';
+    }
+  }
+
+  String get value => name;
+
+  static ReviewTrigger fromString(String value) {
+    return ReviewTrigger.values.firstWhere(
+      (trigger) => trigger.value == value,
+      orElse: () => ReviewTrigger.visit,
+    );
+  }
+}
+
+class ReviewRatingLabels {
+  static const labels = {
+    1: 'Poor',
+    2: 'Fair',
+    3: 'Good',
+    4: 'Very Good',
+    5: 'Excellent',
+  };
+
+  static String forRating(int rating) =>
+      labels[rating.clamp(1, 5)] ?? 'Good';
+}
+
 enum ReservationStatus {
   pending,
   approved,
@@ -72,4 +111,5 @@ class AppCollections {
   static const stock = 'stock';
   static const reservations = 'reservations';
   static const notifications = 'notifications';
+  static const reviews = 'reviews';
 }

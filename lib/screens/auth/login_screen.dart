@@ -1,3 +1,4 @@
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -63,6 +64,9 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  static const _teal = Color(0xFF2DB5A0);
+  static const _tealDark = Color(0xFF1A8F80);
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AppAuthProvider>();
@@ -70,74 +74,54 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFE7F7FA),
-              Color(0xFFD8F0F5),
-              Color(0xFFFFFFFF),
-            ],
+          image: DecorationImage(
+            image: AssetImage('assets/images/login_background.png'),
+            fit: BoxFit.cover,
           ),
         ),
 
         child: SafeArea(
-          child: Stack(
-            children: [
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 430),
 
-              /// TOP RIGHT CIRCLE
-              Positioned(
-                top: -60,
-                right: -50,
-                child: Container(
-                  height: 220,
-                  width: 220,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.teal.withOpacity(0.08),
-                  ),
-                ),
-              ),
-
-              /// BOTTOM LEFT CIRCLE
-              Positioned(
-                bottom: -70,
-                left: -60,
-                child: Container(
-                  height: 260,
-                  width: 260,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.blue.withOpacity(0.05),
-                  ),
-                ),
-              ),
-
-              /// CONTENT
-              Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 430),
-
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
                     child: Container(
                       padding: const EdgeInsets.all(30),
 
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.95),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withOpacity(0.14),
+                            _teal.withOpacity(0.1),
+                          ],
+                        ),
                         borderRadius: BorderRadius.circular(32),
-
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.teal.withOpacity(0.12),
-                            blurRadius: 30,
-                            spreadRadius: 5,
-                            offset: const Offset(0, 12),
-                          ),
-                        ],
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.45),
+                          width: 1.5,
+                        ),
                       ),
 
-                      child: Form(
+                      child: Theme(
+                        data: Theme.of(context).copyWith(
+                          inputDecorationTheme: InputDecorationTheme(
+                            labelStyle: TextStyle(
+                              color: Colors.white.withOpacity(0.92),
+                            ),
+                            floatingLabelStyle: TextStyle(
+                              color: Colors.white.withOpacity(0.95),
+                            ),
+                          ),
+                        ),
+                        child: Form(
                         key: _formKey,
 
                         child: Column(
@@ -151,15 +135,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 width: 110,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
-                                  gradient: LinearGradient(
+                                  gradient: const LinearGradient(
                                     colors: [
-                                      Colors.teal.shade400,
-                                      Colors.teal.shade700,
+                                      _teal,
+                                      _tealDark,
                                     ],
                                   ),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.teal.withOpacity(0.35),
+                                      color: _teal.withOpacity(0.45),
                                       blurRadius: 25,
                                       offset: const Offset(0, 10),
                                     ),
@@ -193,8 +177,15 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: TextStyle(
                                 fontSize: 34,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.teal.shade900,
+                                color: Colors.white,
                                 letterSpacing: 1,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.35),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                             ),
 
@@ -207,7 +198,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: TextStyle(
                                 fontSize: 15,
                                 height: 1.5,
-                                color: Colors.grey.shade700,
+                                color: Colors.white.withOpacity(0.88),
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ],
                               ),
                             ),
 
@@ -219,36 +217,41 @@ class _LoginScreenState extends State<LoginScreen> {
                               keyboardType:
                                   TextInputType.emailAddress,
                               validator: Validators.email,
+                              style: const TextStyle(color: Colors.white),
 
                               decoration: InputDecoration(
                                 labelText: "Email Address",
 
                                 prefixIcon: Icon(
                                   Icons.email_outlined,
-                                  color: Colors.teal.shade700,
+                                  color: Colors.white.withOpacity(0.9),
                                 ),
 
                                 filled: true,
                                 fillColor:
-                                    Colors.teal.withOpacity(0.04),
+                                    Colors.white.withOpacity(0.12),
 
                                 border: OutlineInputBorder(
                                   borderRadius:
                                       BorderRadius.circular(18),
-                                  borderSide: BorderSide.none,
+                                  borderSide: BorderSide(
+                                    color: Colors.white.withOpacity(0.35),
+                                  ),
                                 ),
 
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius:
                                       BorderRadius.circular(18),
-                                  borderSide: BorderSide.none,
+                                  borderSide: BorderSide(
+                                    color: Colors.white.withOpacity(0.35),
+                                  ),
                                 ),
 
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius:
                                       BorderRadius.circular(18),
-                                  borderSide: BorderSide(
-                                    color: Colors.teal.shade400,
+                                  borderSide: const BorderSide(
+                                    color: Colors.white,
                                     width: 2,
                                   ),
                                 ),
@@ -262,13 +265,14 @@ class _LoginScreenState extends State<LoginScreen> {
                               controller: _passwordController,
                               obscureText: _obscurePassword,
                               validator: Validators.password,
+                              style: const TextStyle(color: Colors.white),
 
                               decoration: InputDecoration(
                                 labelText: "Password",
 
                                 prefixIcon: Icon(
                                   Icons.lock_outline_rounded,
-                                  color: Colors.teal.shade700,
+                                  color: Colors.white.withOpacity(0.9),
                                 ),
 
                                 suffixIcon: IconButton(
@@ -276,6 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     _obscurePassword
                                         ? Icons.visibility_off
                                         : Icons.visibility,
+                                    color: Colors.white.withOpacity(0.85),
                                   ),
                                   onPressed: () {
                                     setState(() {
@@ -287,25 +292,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                 filled: true,
                                 fillColor:
-                                    Colors.teal.withOpacity(0.04),
+                                    Colors.white.withOpacity(0.12),
 
                                 border: OutlineInputBorder(
                                   borderRadius:
                                       BorderRadius.circular(18),
-                                  borderSide: BorderSide.none,
+                                  borderSide: BorderSide(
+                                    color: Colors.white.withOpacity(0.35),
+                                  ),
                                 ),
 
                                 enabledBorder: OutlineInputBorder(
                                   borderRadius:
                                       BorderRadius.circular(18),
-                                  borderSide: BorderSide.none,
+                                  borderSide: BorderSide(
+                                    color: Colors.white.withOpacity(0.35),
+                                  ),
                                 ),
 
                                 focusedBorder: OutlineInputBorder(
                                   borderRadius:
                                       BorderRadius.circular(18),
-                                  borderSide: BorderSide(
-                                    color: Colors.teal.shade400,
+                                  borderSide: const BorderSide(
+                                    color: Colors.white,
                                     width: 2,
                                   ),
                                 ),
@@ -330,7 +339,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: Text(
                                   "Forgot Password?",
                                   style: TextStyle(
-                                    color: Colors.teal.shade700,
+                                    color: Colors.white.withOpacity(0.92),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -370,15 +379,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
 
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      Colors.teal.shade700,
+                                  backgroundColor: _teal,
 
                                   foregroundColor: Colors.white,
 
                                   elevation: 8,
 
                                   shadowColor:
-                                      Colors.teal.withOpacity(0.4),
+                                      _teal.withOpacity(0.5),
 
                                   shape: RoundedRectangleBorder(
                                     borderRadius:
@@ -408,11 +416,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
 
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor:
-                                      Colors.teal.shade700,
+                                  foregroundColor: _teal,
 
-                                  side: BorderSide(
-                                    color: Colors.teal.shade200,
+                                  backgroundColor:
+                                      _teal.withOpacity(0.12),
+
+                                  side: const BorderSide(
+                                    color: _teal,
                                     width: 1.5,
                                   ),
 
@@ -431,7 +441,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               children: [
                                 Expanded(
                                   child: Divider(
-                                    color: Colors.grey.shade300,
+                                    color: Colors.white.withOpacity(0.35),
                                   ),
                                 ),
                                 Padding(
@@ -441,13 +451,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: Text(
                                     "OR",
                                     style: TextStyle(
-                                      color: Colors.grey.shade600,
+                                      color: Colors.white.withOpacity(0.8),
                                     ),
                                   ),
                                 ),
                                 Expanded(
                                   child: Divider(
-                                    color: Colors.grey.shade300,
+                                    color: Colors.white.withOpacity(0.35),
                                   ),
                                 ),
                               ],
@@ -464,7 +474,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 Text(
                                   "New to MedFinder?",
                                   style: TextStyle(
-                                    color: Colors.grey.shade700,
+                                    color: Colors.white.withOpacity(0.88),
                                   ),
                                 ),
 
@@ -482,8 +492,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: Text(
                                     "Create Account",
                                     style: TextStyle(
-                                      color:
-                                          Colors.teal.shade700,
+                                      color: Colors.white,
                                       fontWeight:
                                           FontWeight.bold,
                                     ),
@@ -494,11 +503,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           ],
                         ),
                       ),
+                      ),
                     ),
                   ),
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
