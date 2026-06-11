@@ -21,6 +21,18 @@ class StockSearchResult {
   final double? distanceKm;
 }
 
+class HuntRouteStop {
+  HuntRouteStop({
+    required this.pharmacy,
+    required this.medicines,
+    this.distanceKm,
+  });
+
+  final Pharmacy pharmacy;
+  final List<String> medicines;
+  final double? distanceKm;
+}
+
 class CustomerProvider extends ChangeNotifier {
   CustomerProvider({
     FirestoreService? firestoreService,
@@ -32,9 +44,12 @@ class CustomerProvider extends ChangeNotifier {
   final LocationService _locationService;
 
   bool isLoading = false;
+  bool isHuntLoading = false;
   String? errorMessage;
+  String? huntErrorMessage;
   Position? currentPosition;
   List<StockSearchResult> searchResults = [];
+  List<HuntRouteStop> huntRoute = [];
   StreamSubscription? _searchSubscription;
 
   Future<void> loadCurrentLocation() async {
@@ -108,6 +123,142 @@ class CustomerProvider extends ChangeNotifier {
         notifyListeners();
       },
     );
+  }
+
+  Future<void> buildMedicineHuntRoute(String query) async {
+    huntRoute = [];
+    huntErrorMessage = null;
+    final medicines = query
+        .split(',')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+
+    if (medicines.isEmpty) {
+      huntErrorMessage = 'Enter at least one medicine name.';
+      notifyListeners();
+      return;
+    }
+
+    isHuntLoading = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      if (currentPosition == null) {
+        await loadCurrentLocation();
+      }
+
+      final pharmacyCache = <String, Pharmacy>{};
+      final routeMap = <String, HuntRouteStop>{};
+      final unavailable = <String>[];
+
+      for (final medicine in medicines) {
+        final stocks = await _firestoreService
+            .searchStockByMedicineNameOnce(medicine);
+
+        if (stocks.isEmpty) {
+          unavailable.add(medicine);
+          continue;
+        }
+
+        StockSearchResult? bestResult;
+        for (final stock in stocks) {
+          final pharmacy = pharmacyCache[stock.pharmacyId] ??
+              await _firestoreService.getPharmacy(stock.pharmacyId);
+          if (pharmacy == null) continue;
+          pharmacyCache[stock.pharmacyId] = pharmacy;
+
+          final distance = currentPosition == null
+              ? null
+              : LocationUtils.distanceInKm(
+                  startLatitude: currentPosition!.latitude,
+                  startLongitude: currentPosition!.longitude,
+                  endLatitude: pharmacy.latitude,
+                  endLongitude: pharmacy.longitude,
+                );
+
+          final result = StockSearchResult(
+            stock: stock,
+            pharmacy: pharmacy,
+            distanceKm: distance,
+          );
+
+          if (bestResult == null ||
+              (result.distanceKm ?? double.maxFinite) <
+                  (bestResult.distanceKm ?? double.maxFinite)) {
+            bestResult = result;
+          }
+        }
+
+        if (bestResult == null) {
+          unavailable.add(medicine);
+          continue;
+        }
+
+        final chosen = bestResult;
+        final key = chosen.pharmacy.pharmacyId;
+        routeMap.update(
+          key,
+          (existing) {
+            final medicines = [...existing.medicines, chosen.stock.medicineName];
+            medicines.sort();
+            return HuntRouteStop(
+              pharmacy: existing.pharmacy,
+              medicines: medicines,
+              distanceKm: existing.distanceKm ?? chosen.distanceKm,
+            );
+          },
+          ifAbsent: () => HuntRouteStop(
+            pharmacy: chosen.pharmacy,
+            medicines: [chosen.stock.medicineName],
+            distanceKm: chosen.distanceKm,
+          ),
+        );
+      }
+
+      final stops = routeMap.values.toList();
+      if (currentPosition != null && stops.isNotEmpty) {
+        final orderedStops = <HuntRouteStop>[];
+        var currentLat = currentPosition!.latitude;
+        var currentLng = currentPosition!.longitude;
+
+        while (stops.isNotEmpty) {
+          stops.sort((a, b) {
+            final distA = LocationUtils.distanceInKm(
+              startLatitude: currentLat,
+              startLongitude: currentLng,
+              endLatitude: a.pharmacy.latitude,
+              endLongitude: a.pharmacy.longitude,
+            );
+            final distB = LocationUtils.distanceInKm(
+              startLatitude: currentLat,
+              startLongitude: currentLng,
+              endLatitude: b.pharmacy.latitude,
+              endLongitude: b.pharmacy.longitude,
+            );
+            return distA.compareTo(distB);
+          });
+          final nextStop = stops.removeAt(0);
+          orderedStops.add(nextStop);
+          currentLat = nextStop.pharmacy.latitude;
+          currentLng = nextStop.pharmacy.longitude;
+        }
+        huntRoute = orderedStops;
+      } else {
+        huntRoute = stops;
+      }
+
+      if (unavailable.isNotEmpty) {
+        huntErrorMessage =
+            'No stock found for: ${unavailable.join(', ')}.';
+      }
+    } catch (error) {
+      huntErrorMessage = error.toString();
+    } finally {
+      isHuntLoading = false;
+      notifyListeners();
+    }
   }
 
   @override

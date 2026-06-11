@@ -133,6 +133,27 @@ class FirestoreService {
         );
   }
 
+  Future<List<Medicine>> searchMedicinesByFreeText(String query) async {
+    final normalized = query.trim().toLowerCase();
+    final snapshot = await _medicines.orderBy('name').get();
+    return snapshot.docs
+        .map((doc) => Medicine.fromMap(doc.data(), id: doc.id))
+        .where((medicine) =>
+            normalized.contains(medicine.name.toLowerCase()) ||
+            normalized.contains(medicine.category.toLowerCase()))
+        .toList();
+  }
+
+  Future<List<Pharmacy>> getPharmaciesByIds(List<String> pharmacyIds) async {
+    if (pharmacyIds.isEmpty) return [];
+    final futures = pharmacyIds.map((id) => _pharmacies.doc(id).get());
+    final docs = await Future.wait(futures);
+    return docs
+        .where((doc) => doc.exists && doc.data() != null)
+        .map((doc) => Pharmacy.fromMap(doc.data()!, id: doc.id))
+        .toList();
+  }
+
   Future<String> saveStock(StockItem stockItem) async {
     final doc = stockItem.stockId.isEmpty
         ? _stock.doc()
@@ -186,6 +207,19 @@ class FirestoreService {
     });
   }
 
+  Future<List<StockItem>> searchStockByMedicineNameOnce(String query) async {
+    final normalized = query.trim().toLowerCase();
+    final snapshot = await _stock.orderBy('medicineName').get();
+    return snapshot.docs
+        .map((doc) => StockItem.fromMap(doc.data(), id: doc.id))
+        .where(
+          (stock) =>
+              stock.medicineName.toLowerCase().contains(normalized) &&
+              stock.isAvailable,
+        )
+        .toList();
+  }
+
   Future<String> createReservation(Reservation reservation) async {
     final doc = _reservations.doc();
     final saved = Reservation(
@@ -214,8 +248,42 @@ class FirestoreService {
   Future<void> updateReservationStatus(
     String reservationId,
     ReservationStatus status,
-  ) {
-    return _reservations.doc(reservationId).update({'status': status.name});
+  ) async {
+    final reservationRef = _reservations.doc(reservationId);
+
+    await _db.runTransaction((tx) async {
+      final resSnap = await tx.get(reservationRef);
+      if (!resSnap.exists || resSnap.data() == null) {
+        throw Exception('Reservation not found');
+      }
+      final reservation = Reservation.fromMap(resSnap.data()!, id: reservationId);
+
+      // update reservation status
+      tx.update(reservationRef, {'status': status.name});
+
+      // if picked up, decrement corresponding stock quantity
+      if (status == ReservationStatus.pickedUp) {
+        final stockQuery = await _stock
+            .where('pharmacyId', isEqualTo: reservation.pharmacyId)
+            .where('medicineId', isEqualTo: reservation.medicineId)
+            .limit(1)
+            .get();
+        if (stockQuery.docs.isNotEmpty) {
+          final stockDoc = stockQuery.docs.first;
+          final data = stockDoc.data();
+          final currentQty = (data['quantity'] as num?)?.toInt() ?? 0;
+          final newQty = (currentQty - reservation.quantity) < 0
+              ? 0
+              : (currentQty - reservation.quantity);
+          final isAvailable = newQty > 0;
+          tx.update(stockDoc.reference, {
+            'quantity': newQty,
+            'isAvailable': isAvailable,
+            'updatedAt': Timestamp.now(),
+          });
+        }
+      }
+    });
   }
 
   Stream<List<Reservation>> watchReservationsForUser(String userId) {

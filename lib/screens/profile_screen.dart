@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:convert';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import '../utils/download_helper.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/app_auth_provider.dart';
@@ -61,12 +61,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
           showAppSnackBar(context, 'Saved image locally: $localPath');
         }
       } else {
+        if (mounted) {
+          showAppSnackBar(context, 'Local file save not supported on web.');
+        }
+      }
+
+      // If image is small, consider storing as Base64 in Firestore (not recommended for large images).
+      const maxFirestoreBytes = 150 * 1024; // 150 KB
+      if (bytes.lengthInBytes <= maxFirestoreBytes) {
         try {
-          final filename = 'profile_${user.uid}_$timestamp.jpg';
-          await downloadBytes(bytes, filename, 'image/jpeg');
-          if (mounted) showAppSnackBar(context, 'Downloaded image: $filename');
+          final b64 = base64Encode(bytes);
+          final dataUri = 'data:image/jpeg;base64,$b64';
+          await auth.updateProfileImage(dataUri);
+          if (mounted) showAppSnackBar(context, 'Profile image saved in Firestore (base64).');
+          // done; skip storage upload
+          return;
         } catch (e) {
-          if (mounted) showAppSnackBar(context, 'Could not download image: $e', isError: true);
+          if (mounted) showAppSnackBar(context, 'Could not save to Firestore: $e', isError: true);
+          // fall through to storage upload
         }
       }
       final imageUrl = await StorageService().uploadProfileImage(
@@ -120,8 +132,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         radius: 48,
                         backgroundColor: Colors.teal.shade100,
                         backgroundImage: user.profileImageUrl != null
-                            ? NetworkImage(user.profileImageUrl!) as ImageProvider
-                            : null,
+                          ? (user.profileImageUrl!.startsWith('data:')
+                            ? MemoryImage(base64Decode(user.profileImageUrl!.split(',').last)) as ImageProvider
+                            : NetworkImage(user.profileImageUrl!) as ImageProvider)
+                          : null,
                         child: user.profileImageUrl == null
                             ? Text(
                                 user.name.isNotEmpty

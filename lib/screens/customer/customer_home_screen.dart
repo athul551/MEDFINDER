@@ -9,6 +9,7 @@ import '../../widgets/loading_view.dart';
 import '../../widgets/stock_card.dart';
 
 import '../profile_screen.dart';
+import 'ai_assistant_screen.dart';
 import 'medicine_search_screen.dart';
 import 'reservation_history_screen.dart';
 
@@ -317,6 +318,34 @@ class _CustomerOverview extends StatelessWidget {
                         MaterialPageRoute(
                           builder: (_) =>
                               const MedicineSearchScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 14),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+
+                  child: FilledButton.icon(
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    label: const Text('Ask Jasper'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.14),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const AIAssistantScreen(),
                         ),
                       );
                     },
