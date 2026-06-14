@@ -116,22 +116,24 @@ class _MedicineSearchScreenState
 
   @override
   Widget build(BuildContext context) {
+    final provider = context.watch<CustomerProvider>();
 
-    final provider =
-        context.watch<CustomerProvider>();
-
+    // Rebuild cleaned widget tree (fixes syntax issues around conditional widgets)
     return Scaffold(
-      backgroundColor: const Color(0xFFF4FBFC),
+      backgroundColor: const Color(0xFFF8FDFF),
 
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
+        toolbarHeight: 70,
 
         title: Text(
           'Medicine Search',
           style: TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w800,
             color: Colors.teal.shade900,
+            fontSize: 24,
+            letterSpacing: -0.5,
           ),
         ),
       ),
@@ -141,28 +143,36 @@ class _MedicineSearchScreenState
 
           /// TOP HERO SECTION
           Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(22),
+            margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+            padding: const EdgeInsets.all(24),
 
             decoration: BoxDecoration(
               borderRadius:
-                  BorderRadius.circular(28),
+                  BorderRadius.circular(32),
 
               gradient: LinearGradient(
                 colors: [
-                  Colors.teal.shade600,
-                  Colors.teal.shade800,
+                  Colors.teal.shade500,
+                  Colors.teal.shade700,
+                  Colors.teal.shade900,
                 ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
+                stops: const [0.0, 0.5, 1.0],
               ),
 
               boxShadow: [
                 BoxShadow(
                   color:
-                      Colors.teal.withAlpha((0.25 * 255).round()),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+                      Colors.teal.withAlpha((0.35 * 255).round()),
+                  blurRadius: 28,
+                  offset: const Offset(0, 14),
+                ),
+                BoxShadow(
+                  color:
+                      Colors.teal.shade600.withAlpha((0.2 * 255).round()),
+                  blurRadius: 14,
+                  offset: const Offset(0, 7),
                 ),
               ],
             ),
@@ -181,19 +191,23 @@ class _MedicineSearchScreenState
                         "Search Medicines",
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 24,
+                          fontSize: 26,
                           fontWeight:
-                              FontWeight.bold,
+                              FontWeight.w800,
+                          height: 1.2,
+                          letterSpacing: -0.5,
                         ),
                       ),
 
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
 
                       Text(
                         "Find nearby pharmacies with available medicine stock instantly.",
                         style: TextStyle(
-                          color: Colors.white.withAlpha((0.9 * 255).round()),
+                          color: Colors.white.withAlpha((0.92 * 255).round()),
                           height: 1.5,
+                          fontSize: 14,
+                          letterSpacing: 0.2,
                         ),
                       ),
                     ],
@@ -203,18 +217,22 @@ class _MedicineSearchScreenState
                 const SizedBox(width: 16),
 
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(18),
 
                   decoration: BoxDecoration(
                     color:
-                        Colors.white.withAlpha((0.12 * 255).round()),
+                        Colors.white.withAlpha((0.15 * 255).round()),
                     shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.2),
+                      width: 2,
+                    ),
                   ),
 
                   child: const Icon(
                     Icons.medication_rounded,
                     color: Colors.white,
-                    size: 42,
+                    size: 46,
                   ),
                 ),
               ],
@@ -225,23 +243,27 @@ class _MedicineSearchScreenState
           Padding(
             padding:
                 const EdgeInsets.symmetric(
-                  horizontal: 16,
+                  horizontal: 20,
                 ),
 
             child: Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius:
-                    BorderRadius.circular(22),
+                    BorderRadius.circular(24),
 
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black
-                        .withAlpha((0.04 * 255).round()),
-                    blurRadius: 12,
-                    offset: const Offset(0, 5),
+                        .withAlpha((0.06 * 255).round()),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
                   ),
                 ],
+                border: Border.all(
+                  color: Colors.grey.shade200,
+                  width: 1,
+                ),
               ),
 
               child: TextField(
@@ -259,16 +281,23 @@ class _MedicineSearchScreenState
                   hintText:
                       "Search medicine name...",
 
+                  hintStyle: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 15,
+                  ),
+
                   border: InputBorder.none,
 
                   contentPadding:
                       const EdgeInsets.symmetric(
-                    vertical: 18,
+                    vertical: 20,
+                    horizontal: 20,
                   ),
 
                   prefixIcon: Icon(
                     Icons.search,
                     color: Colors.teal.shade700,
+                    size: 24,
                   ),
 
                   suffixIcon: IconButton(
@@ -276,18 +305,19 @@ class _MedicineSearchScreenState
 
                     icon: Container(
                       padding:
-                          const EdgeInsets.all(8),
+                          const EdgeInsets.all(10),
 
                       decoration: BoxDecoration(
-                        color: Colors.teal,
+                        color: Colors.teal.shade700,
                         borderRadius:
                             BorderRadius.circular(
-                                12),
+                                14),
                       ),
 
                       child: const Icon(
                         Icons.arrow_forward,
                         color: Colors.white,
+                        size: 18,
                       ),
                     ),
 
@@ -306,26 +336,31 @@ class _MedicineSearchScreenState
           /// FUZZY SUGGESTIONS
           if (suggestions.isNotEmpty &&
               _searchController.text.isNotEmpty)
-
             Container(
+
+
               margin:
-                  const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 10,
+                  const EdgeInsets.fromLTRB(
+                20, 12, 20, 0,
               ),
 
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius:
-                    BorderRadius.circular(20),
+                    BorderRadius.circular(24),
 
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black
-                        .withAlpha((0.04 * 255).round()),
-                    blurRadius: 10,
+                        .withAlpha((0.06 * 255).round()),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
                   ),
                 ],
+                border: Border.all(
+                  color: Colors.grey.shade200,
+                  width: 1,
+                ),
               ),
 
               child: Column(
@@ -336,21 +371,26 @@ class _MedicineSearchScreenState
 
                     leading: CircleAvatar(
                       backgroundColor:
-                          Colors.teal.withAlpha((0.1 * 255).round()),
+                          Colors.teal.withAlpha((0.12 * 255).round()),
 
                       child: Icon(
                         Icons.medication,
                         color:
                             Colors.teal.shade700,
+                        size: 20,
                       ),
                     ),
 
-                    title: Text(item),
+                    title: Text(
+                      item,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
 
                     onTap: () {
-
-                      _searchController.text =
-                          item;
+                      _searchController.text = item;
 
                       provider.searchMedicine(
                         item,
@@ -365,26 +405,44 @@ class _MedicineSearchScreenState
               ),
             ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
           if (_searchController.text.trim().isNotEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: FilledButton.icon(
-                icon: const Icon(Icons.local_shipping_outlined),
-                label: const Text('Use Medicine Hunt Mode'),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => MedicineHuntScreen(
-                        query: _searchController.text,
-                      ),
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: FilledButton.icon(
+                  icon: const Icon(Icons.local_shipping_outlined, size: 20),
+                  label: const Text(
+                    'Use Medicine Hunt Mode',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
                     ),
-                  );
-                },
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.teal.shade700,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => MedicineHuntScreen(
+                          query: _searchController.text,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 16),
 
           /// RESULTS
           Expanded(
@@ -415,7 +473,7 @@ class _MedicineSearchScreenState
 
                 return ListView.builder(
                   padding:
-                      const EdgeInsets.all(16),
+                      const EdgeInsets.fromLTRB(20, 0, 20, 20),
 
                   itemCount:
                       provider.searchResults.length,
@@ -430,7 +488,7 @@ class _MedicineSearchScreenState
                     return Padding(
                       padding:
                           const EdgeInsets.only(
-                        bottom: 14,
+                        bottom: 16,
                       ),
 
                       child: Container(
@@ -444,11 +502,15 @@ class _MedicineSearchScreenState
                           boxShadow: [
 
                             BoxShadow(
-                              color: Colors.black.withAlpha((0.04 * 255).round()),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
+                              color: Colors.black.withAlpha((0.06 * 255).round()),
+                              blurRadius: 14,
+                              offset: const Offset(0, 6),
                             ),
                           ],
+                          border: Border.all(
+                            color: Colors.grey.shade100,
+                            width: 1,
+                          ),
                         ),
 
                         child: StockCard(

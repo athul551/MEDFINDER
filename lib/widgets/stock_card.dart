@@ -24,59 +24,64 @@ class StockCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final formatter = NumberFormat.simpleCurrency();
 
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      margin: const EdgeInsets.symmetric(vertical: 6),
+      elevation: 0,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
+      margin: EdgeInsets.zero,
+      color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Container(
-                    width: 48,
-                    height: 48,
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.teal.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                     child: Icon(
                       Icons.medication,
-                      color: theme.colorScheme.primary,
-                      size: 28,
+                      color: Colors.teal.shade700,
+                      size: 32,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           stock.medicineName,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.teal.shade900,
                           ),
                         ),
+                        const SizedBox(height: 6),
                         if (pharmacy != null) ...[
                           Text(
                             pharmacy!.name,
-                            style: theme.textTheme.bodySmall?.copyWith(
+                            style: TextStyle(
                               color: Colors.grey.shade600,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
                           if (pharmacy!.reviewCount > 0) ...[
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 8),
                             StarRatingDisplay(
                               rating: pharmacy!.averageRating,
-                              size: 14,
+                              size: 15,
                               showValue: true,
                             ),
                           ],
@@ -84,13 +89,18 @@ class StockCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  trailing ?? const Icon(Icons.chevron_right),
+                  const SizedBox(width: 12),
+                  trailing ?? Icon(
+                    Icons.chevron_right,
+                    color: Colors.grey.shade400,
+                    size: 24,
+                  ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               Wrap(
-                spacing: 8,
-                runSpacing: 6,
+                spacing: 10,
+                runSpacing: 10,
                 children: [
                   _InfoChip(
                     label: stock.isAvailable ? 'Available' : 'Out of stock',
@@ -105,24 +115,25 @@ class StockCard extends StatelessWidget {
                 ],
               ),
               if (stock.isLowStock || stock.isExpiringSoon) ...[
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 Container(
-                  padding: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    color: AppColors.warning.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: AppColors.warning.withOpacity(0.3),
+                      width: 1.5,
                     ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(
-                        Icons.warning_amber,
+                      Icon(
+                        Icons.warning_amber_rounded,
                         color: AppColors.warning,
-                        size: 18,
+                        size: 20,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Text(
                           [
@@ -130,9 +141,10 @@ class StockCard extends StatelessWidget {
                             if (stock.isExpiringSoon)
                               'Expires ${DateFormat.yMMMd().format(stock.expiryDate)}',
                           ].join(' | '),
-                          style: theme.textTheme.bodySmall?.copyWith(
+                          style: const TextStyle(
                             color: AppColors.warning,
                             fontWeight: FontWeight.w600,
+                            fontSize: 13,
                           ),
                         ),
                       ),
@@ -158,17 +170,22 @@ class _InfoChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final textColor = color ?? Theme.of(context).colorScheme.onSurfaceVariant;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: textColor.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: textColor.withOpacity(0.2),
+          width: 1,
+        ),
       ),
       child: Text(
         label,
         style: TextStyle(
           color: textColor,
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
+          letterSpacing: 0.2,
         ),
       ),
     );
