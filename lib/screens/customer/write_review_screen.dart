@@ -10,6 +10,7 @@ import '../../utils/snackbars.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_text_field.dart';
 import '../../widgets/star_rating_display.dart';
+import 'customer_ui.dart';
 
 class WriteReviewScreen extends StatefulWidget {
   const WriteReviewScreen({
@@ -88,20 +89,32 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFEFFBF8),
       appBar: AppBar(
-        title: Text('Rate ${widget.pharmacy.name}'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        title: Text(
+          'Rate ${widget.pharmacy.name}',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Colors.teal.shade900,
+          ),
+        ),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+      body: CustomerScreenBackground(
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            CustomerSurfaceCard(
+              padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
                   Text(
                     'Overall rating',
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: Colors.teal.shade900,
+                        ),
                   ),
                   const SizedBox(height: 8),
                   StarRatingDisplay(
@@ -110,46 +123,52 @@ class _WriteReviewScreenState extends State<WriteReviewScreen> {
                     showValue: true,
                   ),
                   const SizedBox(height: 4),
-                  Text(ReviewRatingLabels.forRating(_overallRating)),
+                  Text(
+                    ReviewRatingLabels.forRating(_overallRating),
+                    style: TextStyle(
+                      color: Colors.teal.shade700,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          _CategoryRatingTile(
-            label: 'Availability',
-            rating: _availability,
-            onChanged: (value) => setState(() => _availability = value),
-          ),
-          _CategoryRatingTile(
-            label: 'Pricing',
-            rating: _pricing,
-            onChanged: (value) => setState(() => _pricing = value),
-          ),
-          _CategoryRatingTile(
-            label: 'Service',
-            rating: _service,
-            onChanged: (value) => setState(() => _service = value),
-          ),
-          _CategoryRatingTile(
-            label: 'Delivery',
-            rating: _delivery,
-            onChanged: (value) => setState(() => _delivery = value),
-          ),
-          const SizedBox(height: 16),
-          AppTextField(
-            controller: _commentController,
-            label: 'Your review (optional)',
-            maxLines: 4,
-          ),
-          const SizedBox(height: 24),
-          AppButton(
-            label: 'Submit review',
-            icon: Icons.rate_review_outlined,
-            isLoading: _isSaving,
-            onPressed: _submit,
-          ),
-        ],
+            const SizedBox(height: 16),
+            _CategoryRatingTile(
+              label: 'Availability',
+              rating: _availability,
+              onChanged: (value) => setState(() => _availability = value),
+            ),
+            _CategoryRatingTile(
+              label: 'Pricing',
+              rating: _pricing,
+              onChanged: (value) => setState(() => _pricing = value),
+            ),
+            _CategoryRatingTile(
+              label: 'Service',
+              rating: _service,
+              onChanged: (value) => setState(() => _service = value),
+            ),
+            _CategoryRatingTile(
+              label: 'Delivery',
+              rating: _delivery,
+              onChanged: (value) => setState(() => _delivery = value),
+            ),
+            const SizedBox(height: 16),
+            AppTextField(
+              controller: _commentController,
+              label: 'Your review (optional)',
+              maxLines: 4,
+            ),
+            const SizedBox(height: 24),
+            AppButton(
+              label: 'Submit review',
+              icon: Icons.rate_review_outlined,
+              isLoading: _isSaving,
+              onPressed: _submit,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -168,9 +187,9 @@ class _CategoryRatingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: Padding(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: CustomerSurfaceCard(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -179,7 +198,10 @@ class _CategoryRatingTile extends StatelessWidget {
               padding: const EdgeInsets.only(left: 8, top: 4),
               child: Text(
                 label,
-                style: Theme.of(context).textTheme.titleSmall,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: Colors.teal.shade800,
+                    ),
               ),
             ),
             Row(

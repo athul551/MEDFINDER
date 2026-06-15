@@ -10,6 +10,7 @@ import '../../utils/app_constants.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/stock_card.dart';
+import '../customer/customer_ui.dart';
 import '../profile_screen.dart';
 import 'add_edit_medicine_screen.dart';
 import 'pharmacy_reviews_screen.dart';
@@ -97,11 +98,20 @@ class _StockOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pharmacy Dashboard'),
+        title: Text(
+          'Pharmacy Dashboard',
+          style: TextStyle(
+            color: Colors.teal.shade900,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.teal.shade900),
         actions: [
           IconButton(
             tooltip: 'Add medicine',
-            icon: const Icon(Icons.add),
+            icon: Icon(Icons.add, color: Colors.teal.shade700),
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -110,6 +120,7 @@ class _StockOverview extends StatelessWidget {
             ),
           ),
           PopupMenuButton(
+            icon: Icon(Icons.more_vert, color: Colors.teal.shade700),
             itemBuilder: (context) => [
               PopupMenuItem(
                 child: const Row(
@@ -125,86 +136,105 @@ class _StockOverview extends StatelessWidget {
           ),
         ],
       ),
-      body: StreamBuilder<List<StockItem>>(
-        stream: context.read<FirestoreService>().watchStockForPharmacy(
-              pharmacy.pharmacyId,
-            ),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return EmptyState(
-              icon: Icons.error_outline,
-              title: 'Unable to load stock',
-              message: snapshot.error.toString(),
-            );
-          }
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const LoadingView(message: 'Loading dashboard...');
-          }
-          final stock = snapshot.data ?? [];
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _PharmacyHeaderCard(pharmacy: pharmacy, stockCount: stock.length),
-              const SizedBox(height: 20),
-              _DashboardStats(stock: stock),
-              const SizedBox(height: 24),
-              Text('Medicine Stock',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      )),
-              const SizedBox(height: 12),
-              if (stock.isEmpty)
-                const EmptyState(
-                  icon: Icons.inventory_2_outlined,
-                  title: 'No stock added',
-                  message: 'Add your first medicine to start receiving reservations.',
-                )
-              else
-                ...stock
-                    .map(
-                      (item) => StockCard(
-                        stock: item,
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit_outlined),
-                              tooltip: 'Edit stock',
-                              onPressed: () => Navigator.push(
+      body: CustomerScreenBackground(
+        child: StreamBuilder<List<StockItem>>(
+          stream: context.read<FirestoreService>().watchStockForPharmacy(
+                pharmacy.pharmacyId,
+              ),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return EmptyState(
+                icon: Icons.error_outline,
+                title: 'Unable to load stock',
+                message: snapshot.error.toString(),
+              );
+            }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const LoadingView(message: 'Loading dashboard...');
+            }
+            final stock = snapshot.data ?? [];
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+              children: [
+                AnimatedStaggerItem(
+                  delay: 0,
+                  child: _PharmacyHeaderCard(pharmacy: pharmacy, stockCount: stock.length),
+                ),
+                const SizedBox(height: 20),
+                AnimatedStaggerItem(
+                  delay: 100,
+                  child: _DashboardStats(stock: stock),
+                ),
+                const SizedBox(height: 24),
+                const AnimatedStaggerItem(
+                  delay: 150,
+                  child: CustomerSectionHeader(title: 'Medicine Stock'),
+                ),
+                const SizedBox(height: 12),
+                if (stock.isEmpty)
+                  const AnimatedStaggerItem(
+                    delay: 200,
+                    child: EmptyState(
+                      icon: Icons.inventory_2_outlined,
+                      title: 'No stock added',
+                      message: 'Add your first medicine to start receiving reservations.',
+                    ),
+                  )
+                else
+                  ...stock.asMap().entries.map(
+                        (entry) => Padding(
+                          padding: const EdgeInsets.only(bottom: 2),
+                          child: AnimatedStaggerItem(
+                            delay: 200 + entry.key * 50,
+                            child: AnimatedPressScale(
+                              onTap: () => Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => AddEditMedicineScreen(
                                     pharmacy: pharmacy,
-                                    stockItem: item,
+                                    stockItem: entry.value,
                                   ),
                                 ),
                               ),
-                            ),
-                            Switch(
-                              value: item.isAvailable,
-                              onChanged: (value) => context
-                                  .read<PharmacyProvider>()
-                                  .setAvailability(item.stockId, value),
-                            ),
-                          ],
-                        ),
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => AddEditMedicineScreen(
-                              pharmacy: pharmacy,
-                              stockItem: item,
+                              child: StockCard(
+                                stock: entry.value,
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined),
+                                      tooltip: 'Edit stock',
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AddEditMedicineScreen(
+                                            pharmacy: pharmacy,
+                                            stockItem: entry.value,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    Switch(
+                                      value: entry.value.isAvailable,
+                                      onChanged: (value) => context
+                                          .read<PharmacyProvider>()
+                                          .setAvailability(entry.value.stockId, value),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    )
-                    .toList(),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: const Color(0xFF00796B),
+        foregroundColor: Colors.white,
         icon: const Icon(Icons.add),
         label: const Text('Add stock'),
         onPressed: () => Navigator.push(
@@ -265,80 +295,120 @@ class _PharmacyHeaderCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.secondary],
+        borderRadius: BorderRadius.circular(32),
+        gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF004D40),
+            Color(0xFF00796B),
+            Color(0xFF009688),
+          ],
         ),
-        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: const Color(0xFF004D40).withAlpha((0.28 * 255).round()),
+            blurRadius: 28,
+            offset: const Offset(0, 18),
           ),
         ],
       ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
-            children: [
-              Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.storefront,
-                  color: Colors.white,
-                  size: 32,
-                ),
+          Positioned(
+            top: -52,
+            right: -44,
+            child: Container(
+              width: 150,
+              height: 150,
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha((0.14 * 255).round()),
+                shape: BoxShape.circle,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      pharmacy.name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          pharmacy.name,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w800,
+                                height: 1.15,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Pharmacy account active',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color: Colors.white.withAlpha(
+                                  (0.9 * 255).round(),
+                                ),
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha((0.16 * 255).round()),
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(
+                        color: Colors.white.withAlpha((0.18 * 255).round()),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    child: const Icon(
+                      Icons.storefront,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withAlpha((0.16 * 255).round()),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Colors.white.withAlpha((0.18 * 255).round()),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.inventory_2, color: Colors.white, size: 16),
+                    const SizedBox(width: 6),
                     Text(
-                      'Pharmacy account active',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 14,
-                      ),
+                      '$stockCount medicines in stock',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
                     ),
                   ],
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              '$stockCount medicines in stock',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           ),
         ],
       ),
@@ -359,7 +429,7 @@ class _DashboardStats extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _StatCard(
+          child: CustomerStatCard(
             icon: Icons.inventory,
             label: 'Total Items',
             value: stock.length.toString(),
@@ -368,7 +438,7 @@ class _DashboardStats extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _StatCard(
+          child: CustomerStatCard(
             icon: Icons.check_circle,
             label: 'Available',
             value: available.toString(),
@@ -377,7 +447,7 @@ class _DashboardStats extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _StatCard(
+          child: CustomerStatCard(
             icon: Icons.warning_amber,
             label: 'Low Stock',
             value: lowStock.toString(),
@@ -385,61 +455,6 @@ class _DashboardStats extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
     );
   }
 }

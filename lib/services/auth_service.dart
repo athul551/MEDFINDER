@@ -89,6 +89,7 @@ class AuthService {
     );
     final firebaseUser = credential.user!;
     await firebaseUser.updateDisplayName(name.trim());
+    await firebaseUser.getIdToken(true);
     final appUser = AppUser(
       uid: firebaseUser.uid,
       name: name.trim(),

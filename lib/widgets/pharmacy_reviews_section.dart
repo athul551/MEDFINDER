@@ -23,14 +23,15 @@ class PharmacyReviewsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         PharmacyRatingDashboard(pharmacy: pharmacy, compact: compact),
-        const SizedBox(height: 16),
+        const SizedBox(height: 20),
         Text(
           'Customer reviews',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: Colors.teal.shade900,
               ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         StreamBuilder(
           stream: context
               .read<FirestoreService>()

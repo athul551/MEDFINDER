@@ -9,6 +9,7 @@ import '../../utils/snackbars.dart';
 import '../../utils/validators.dart';
 import '../../widgets/app_button.dart';
 import '../../widgets/app_text_field.dart';
+import '../customer/customer_ui.dart';
 
 class AddEditMedicineScreen extends StatefulWidget {
   const AddEditMedicineScreen({
@@ -118,77 +119,120 @@ class _AddEditMedicineScreenState extends State<AddEditMedicineScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit medicine' : 'Add medicine'),
+        title: Text(
+          _isEditing ? 'Edit medicine' : 'Add medicine',
+          style: TextStyle(
+            color: Colors.teal.shade900,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.teal.shade900),
       ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            AppTextField(
-              controller: _nameController,
-              label: 'Medicine name',
-              prefixIcon: Icons.medication_outlined,
-              validator: (value) =>
-                  Validators.required(value, label: 'Medicine name'),
-            ),
-            if (!_isEditing) ...[
-              const SizedBox(height: 14),
-              AppTextField(
-                controller: _categoryController,
-                label: 'Category',
-                prefixIcon: Icons.category_outlined,
-                validator: (value) =>
-                    Validators.required(value, label: 'Category'),
+      body: CustomerScreenBackground(
+        child: Form(
+          key: _formKey,
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+            children: [
+              CustomerSurfaceCard(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Medicine Details',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.teal.shade900,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    AppTextField(
+                      controller: _nameController,
+                      label: 'Medicine name',
+                      prefixIcon: Icons.medication_outlined,
+                      validator: (value) =>
+                          Validators.required(value, label: 'Medicine name'),
+                    ),
+                    if (!_isEditing) ...[
+                      const SizedBox(height: 14),
+                      AppTextField(
+                        controller: _categoryController,
+                        label: 'Category',
+                        prefixIcon: Icons.category_outlined,
+                        validator: (value) =>
+                            Validators.required(value, label: 'Category'),
+                      ),
+                      const SizedBox(height: 14),
+                      AppTextField(
+                        controller: _descriptionController,
+                        label: 'Description',
+                        maxLines: 2,
+                      ),
+                    ],
+                  ],
+                ),
               ),
-              const SizedBox(height: 14),
-              AppTextField(
-                controller: _descriptionController,
-                label: 'Description',
-                maxLines: 2,
+              const SizedBox(height: 16),
+              CustomerSurfaceCard(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Stock Information',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: Colors.teal.shade900,
+                          ),
+                    ),
+                    const SizedBox(height: 16),
+                    AppTextField(
+                      controller: _quantityController,
+                      label: 'Quantity',
+                      keyboardType: TextInputType.number,
+                      validator: (value) =>
+                          Validators.positiveNumber(value, label: 'Quantity'),
+                    ),
+                    const SizedBox(height: 14),
+                    AppTextField(
+                      controller: _priceController,
+                      label: 'Price',
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      validator: (value) =>
+                          Validators.positiveNumber(value, label: 'Price'),
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Available'),
+                      value: _isAvailable,
+                      onChanged: (value) => setState(() => _isAvailable = value),
+                    ),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Icon(Icons.event_outlined, color: Colors.teal.shade700),
+                      title: const Text('Expiry date'),
+                      subtitle: Text(_expiryDate.toLocal().toString().split(' ').first),
+                      trailing: Icon(Icons.edit_calendar_outlined, color: Colors.teal.shade700),
+                      onTap: _selectExpiryDate,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              AppButton(
+                label: 'Save stock',
+                icon: Icons.save_outlined,
+                isLoading: _isSaving,
+                onPressed: _save,
               ),
             ],
-            const SizedBox(height: 14),
-            AppTextField(
-              controller: _quantityController,
-              label: 'Quantity',
-              keyboardType: TextInputType.number,
-              validator: (value) =>
-                  Validators.positiveNumber(value, label: 'Quantity'),
-            ),
-            const SizedBox(height: 14),
-            AppTextField(
-              controller: _priceController,
-              label: 'Price',
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              validator: (value) =>
-                  Validators.positiveNumber(value, label: 'Price'),
-            ),
-            const SizedBox(height: 14),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Available'),
-              value: _isAvailable,
-              onChanged: (value) => setState(() => _isAvailable = value),
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.event_outlined),
-              title: const Text('Expiry date'),
-              subtitle: Text(_expiryDate.toLocal().toString().split(' ').first),
-              trailing: const Icon(Icons.edit_calendar_outlined),
-              onTap: _selectExpiryDate,
-            ),
-            const SizedBox(height: 24),
-            AppButton(
-              label: 'Save stock',
-              icon: Icons.save_outlined,
-              isLoading: _isSaving,
-              onPressed: _save,
-            ),
-          ],
+          ),
         ),
       ),
     );
