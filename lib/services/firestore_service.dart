@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/app_notification.dart';
 import '../models/app_user.dart';
 import '../models/medicine.dart';
+import '../models/medicine_subscription.dart';
 import '../models/pharmacy.dart';
 import '../models/pharmacy_review.dart';
 import '../models/reservation.dart';
@@ -31,6 +32,8 @@ class FirestoreService {
       _db.collection(AppCollections.notifications);
   CollectionReference<Map<String, dynamic>> get _reviews =>
       _db.collection(AppCollections.reviews);
+  CollectionReference<Map<String, dynamic>> get _subscriptions =>
+      _db.collection(AppCollections.subscriptions);
 
   Future<void> createUser(AppUser user) {
     return _users.doc(user.uid).set(user.toMap());
@@ -611,5 +614,47 @@ class FirestoreService {
     });
 
     return doc.id;
+  }
+
+  Future<String> createSubscription(MedicineSubscription sub) async {
+    final doc = _subscriptions.doc();
+    final saved = MedicineSubscription(
+      subscriptionId: doc.id,
+      userId: sub.userId,
+      medicineName: sub.medicineName,
+      medicineId: sub.medicineId,
+      pharmacyId: sub.pharmacyId,
+      pharmacyName: sub.pharmacyName,
+      frequencyDays: sub.frequencyDays,
+      quantity: sub.quantity,
+      nextRefillDate: sub.nextRefillDate,
+      lastRefillDate: sub.lastRefillDate,
+      autoReminder: sub.autoReminder,
+      autoReservation: sub.autoReservation,
+      isActive: sub.isActive,
+      createdAt: DateTime.now(),
+    );
+    await doc.set(saved.toMap());
+    return doc.id;
+  }
+
+  Future<void> updateSubscription(MedicineSubscription sub) {
+    return _subscriptions.doc(sub.subscriptionId).update(sub.toMap());
+  }
+
+  Future<void> deleteSubscription(String subscriptionId) {
+    return _subscriptions.doc(subscriptionId).delete();
+  }
+
+  Stream<List<MedicineSubscription>> watchSubscriptionsForUser(String userId) {
+    return _subscriptions
+        .where('userId', isEqualTo: userId)
+        .orderBy('nextRefillDate', descending: false)
+        .snapshots()
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => MedicineSubscription.fromMap(doc.data(), id: doc.id))
+              .toList(),
+        );
   }
 }

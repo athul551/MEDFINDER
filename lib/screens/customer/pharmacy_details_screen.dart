@@ -12,6 +12,7 @@ import '../../utils/app_constants.dart';
 import '../../utils/snackbars.dart';
 import '../../widgets/pharmacy_reviews_section.dart';
 import '../../widgets/star_rating_display.dart';
+import 'create_subscription_screen.dart';
 import 'customer_ui.dart';
 import 'reservation_screen.dart';
 import 'write_review_screen.dart';
@@ -267,6 +268,24 @@ class PharmacyDetailsScreen extends StatelessWidget {
                         label: const Text('Rate visit'),
                         onPressed: () =>
                             _openVisitReview(context, currentPharmacy),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        icon: const Icon(Icons.notifications_active_outlined),
+                        label: const Text('Subscribe'),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => CreateSubscriptionScreen(
+                                medicineName: stock.medicineName,
+                                medicineId: stock.medicineId,
+                                pharmacyId: currentPharmacy.pharmacyId,
+                                pharmacyName: currentPharmacy.name,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 12),
                       FilledButton.icon(

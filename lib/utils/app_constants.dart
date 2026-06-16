@@ -112,4 +112,5 @@ class AppCollections {
   static const reservations = 'reservations';
   static const notifications = 'notifications';
   static const reviews = 'reviews';
+  static const subscriptions = 'subscriptions';
 }

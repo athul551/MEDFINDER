@@ -7,6 +7,7 @@ import 'providers/admin_provider.dart';
 import 'providers/app_auth_provider.dart';
 import 'providers/customer_provider.dart';
 import 'providers/pharmacy_provider.dart';
+import 'providers/subscription_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/auth/login_screen.dart';
@@ -42,6 +43,7 @@ class MedicineAvailabilityFinderApp extends StatelessWidget {
       providers: [
         Provider(create: (_) => FirestoreService()),
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
         ChangeNotifierProvider(create: (_) => AppAuthProvider()..start()),
         ChangeNotifierProvider(create: (_) => CustomerProvider()),
         ChangeNotifierProvider(create: (_) => PharmacyProvider()),

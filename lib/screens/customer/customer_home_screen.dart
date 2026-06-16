@@ -13,6 +13,7 @@ import '../profile_screen.dart';
 import 'ai_assistant_screen.dart';
 import 'customer_ui.dart';
 import 'medicine_search_screen.dart';
+import 'my_subscriptions_screen.dart';
 import 'pharmacy_list_screen.dart';
 import 'reservation_history_screen.dart';
 
@@ -325,6 +326,89 @@ class _CustomerOverview extends StatelessWidget {
             /// HEALTH DASHBOARD
             if (user != null)
               _CustomerHealthDashboard(userId: user.uid),
+
+            const SizedBox(height: 18),
+
+            /// SUBSCRIPTIONS ENTRY
+            AnimatedStaggerItem(
+              delay: 180,
+              child: AnimatedPressScale(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const MySubscriptionsScreen(),
+                  ),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(22),
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Color(0xFF004D40),
+                        Color(0xFF00796B),
+                        Color(0xFF009688),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF004D40)
+                            .withAlpha((0.2 * 255).round()),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withAlpha((0.16 * 255).round()),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(
+                          Icons.notifications_active_outlined,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Medicine Subscriptions',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Auto refills & reminders for your regular medicines',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color:
+                                    Colors.white.withAlpha((0.85 * 255).round()),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.chevron_right,
+                        color: Colors.white.withAlpha((0.8 * 255).round()),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
             const SizedBox(height: 28),
 
