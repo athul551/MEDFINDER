@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/pharmacy.dart';
+import '../../models/reservation.dart';
 import '../../models/stock_item.dart';
 import '../../providers/app_auth_provider.dart';
 import '../../providers/pharmacy_provider.dart';
@@ -165,15 +166,20 @@ class _StockOverview extends StatelessWidget {
                   delay: 100,
                   child: _DashboardStats(stock: stock),
                 ),
+                const SizedBox(height: 20),
+                AnimatedStaggerItem(
+                  delay: 150,
+                  child: _DashboardAnalytics(pharmacy: pharmacy, stock: stock),
+                ),
                 const SizedBox(height: 24),
                 const AnimatedStaggerItem(
-                  delay: 150,
+                  delay: 200,
                   child: CustomerSectionHeader(title: 'Medicine Stock'),
                 ),
                 const SizedBox(height: 12),
                 if (stock.isEmpty)
                   const AnimatedStaggerItem(
-                    delay: 200,
+                    delay: 250,
                     child: EmptyState(
                       icon: Icons.inventory_2_outlined,
                       title: 'No stock added',
@@ -185,7 +191,7 @@ class _StockOverview extends StatelessWidget {
                         (entry) => Padding(
                           padding: const EdgeInsets.only(bottom: 2),
                           child: AnimatedStaggerItem(
-                            delay: 200 + entry.key * 50,
+                            delay: 250 + entry.key * 50,
                             child: AnimatedPressScale(
                               onTap: () => Navigator.push(
                                 context,
@@ -455,6 +461,433 @@ class _DashboardStats extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DashboardAnalytics extends StatelessWidget {
+  const _DashboardAnalytics({required this.pharmacy, required this.stock});
+
+  final Pharmacy pharmacy;
+  final List<StockItem> stock;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<Reservation>>(
+      stream: context.read<FirestoreService>().watchReservationsForPharmacy(
+            pharmacy.pharmacyId,
+          ),
+      builder: (context, snapshot) {
+        final reservations = snapshot.data ?? [];
+
+        final now = DateTime.now();
+        final todayStart = DateTime(now.year, now.month, now.day);
+
+        final todayReservations = reservations.where((r) =>
+            r.reservedAt.isAfter(todayStart) &&
+            r.status == ReservationStatus.pickedUp).toList();
+
+        final pickedUp = reservations
+            .where((r) => r.status == ReservationStatus.pickedUp)
+            .toList();
+
+        final dailyCount = todayReservations.length;
+
+        final lowStockItems = stock.where((s) => s.isLowStock).toList();
+
+        double revenue = 0;
+        for (final r in pickedUp) {
+          final item = stock.where((s) =>
+              s.medicineName.toLowerCase() == r.medicineName.toLowerCase()).firstOrNull;
+          if (item != null) {
+            revenue += item.price * r.quantity;
+          }
+        }
+
+        final medicineSales = <String, int>{};
+        for (final r in pickedUp) {
+          medicineSales.update(r.medicineName, (v) => v + r.quantity,
+              ifAbsent: () => r.quantity);
+        }
+        final sortedMedicines = medicineSales.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+        final topMedicines = sortedMedicines.take(5).toList();
+
+        final weekDays = <String, int>{};
+        for (int i = 6; i >= 0; i--) {
+          final day = DateTime(now.year, now.month, now.day - i);
+          final label = _dayLabel(day);
+          weekDays[label] = 0;
+        }
+        for (final r in reservations.where(
+            (r) => r.status == ReservationStatus.pickedUp)) {
+          final diff = now.difference(r.reservedAt).inDays;
+          if (diff >= 0 && diff <= 6) {
+            final label = _dayLabel(r.reservedAt);
+            weekDays[label] = (weekDays[label] ?? 0) + r.quantity;
+          }
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withAlpha((0.94 * 255).round()),
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.teal.shade900.withAlpha((0.07 * 255).round()),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00796B).withAlpha((0.1 * 255).round()),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: const Icon(
+                      Icons.analytics_outlined,
+                      color: Color(0xFF00796B),
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Text(
+                    'Analytics',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF004D40),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: _AnalyticTile(
+                      icon: Icons.today_outlined,
+                      label: 'Today Picked Up',
+                      value: dailyCount.toString(),
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _AnalyticTile(
+                      icon: Icons.warning_amber_outlined,
+                      label: 'Low Stock Alerts',
+                      value: lowStockItems.length.toString(),
+                      color: AppColors.warning,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _AnalyticTile(
+                      icon: Icons.attach_money,
+                      label: 'Est. Revenue',
+                      value: '₹${revenue.toStringAsFixed(0)}',
+                      color: AppColors.success,
+                    ),
+                  ),
+                ],
+              ),
+              if (lowStockItems.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                _LowStockBanner(items: lowStockItems),
+              ],
+              if (topMedicines.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const Text(
+                  'Top Selling Medicines',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF004D40),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ...topMedicines.map((e) => _TopMedicineRow(
+                      name: e.key,
+                      quantity: e.value,
+                      maxQuantity: topMedicines.first.value,
+                    )),
+              ],
+              if (weekDays.values.any((v) => v > 0)) ...[
+                const SizedBox(height: 20),
+                const Text(
+                  'Weekly Trend',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Color(0xFF004D40),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                _WeeklyBarChart(data: weekDays),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  String _dayLabel(DateTime day) {
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return labels[day.weekday - 1];
+  }
+}
+
+class _AnalyticTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _AnalyticTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withAlpha((0.06 * 255).round()),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withAlpha((0.15 * 255).round())),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 22),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey.shade600,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LowStockBanner extends StatelessWidget {
+  final List<StockItem> items;
+
+  const _LowStockBanner({required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.red.withAlpha((0.06 * 255).round()),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.red.withAlpha((0.2 * 255).round())),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                '${items.length} item${items.length > 1 ? 's' : ''} running low',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ...items.take(3).map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 26),
+                    Expanded(
+                      child: Text(
+                        item.medicineName,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Qty: ${item.quantity}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+          if (items.length > 3)
+            Padding(
+              padding: const EdgeInsets.only(left: 26),
+              child: Text(
+                '+${items.length - 3} more',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey.shade500,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TopMedicineRow extends StatelessWidget {
+  final String name;
+  final int quantity;
+  final int maxQuantity;
+
+  const _TopMedicineRow({
+    required this.name,
+    required this.quantity,
+    required this.maxQuantity,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final fraction = maxQuantity > 0 ? quantity / maxQuantity : 0.0;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF004D40),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                '$quantity sold',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: fraction,
+              minHeight: 6,
+              backgroundColor: Colors.teal.shade50,
+              valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF00796B)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeeklyBarChart extends StatelessWidget {
+  final Map<String, int> data;
+
+  const _WeeklyBarChart({required this.data});
+
+  @override
+  Widget build(BuildContext context) {
+    final maxVal = data.values.reduce((a, b) => a > b ? a : b);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: data.entries.map((entry) {
+          final fraction = maxVal > 0 ? entry.value / maxVal : 0.0;
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${entry.value}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    height: 60 * fraction.clamp(0.05, 1.0),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(6),
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          const Color(0xFF00796B),
+                          const Color(0xFF009688).withAlpha((0.6 * 255).round()),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    entry.key,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
     );
   }
 }

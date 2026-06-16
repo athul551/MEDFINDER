@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/pharmacy.dart';
 import '../models/stock_item.dart';
@@ -52,6 +53,36 @@ class CustomerProvider extends ChangeNotifier {
   List<HuntRouteStop> huntRoute = [];
   StreamSubscription? _searchSubscription;
 
+  List<String> _recentSearches = [];
+  List<String> get recentSearches => List.unmodifiable(_recentSearches);
+
+  void addRecentSearch(String query) {
+    _recentSearches.remove(query);
+    _recentSearches.insert(0, query);
+    if (_recentSearches.length > 10) {
+      _recentSearches = _recentSearches.sublist(0, 10);
+    }
+    notifyListeners();
+    _saveRecentSearches();
+  }
+
+  Future<void> loadRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    _recentSearches = prefs.getStringList('recent_searches') ?? [];
+    notifyListeners();
+  }
+
+  Future<void> _saveRecentSearches() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList('recent_searches', _recentSearches);
+  }
+
+  void clearRecentSearches() {
+    _recentSearches.clear();
+    notifyListeners();
+    _saveRecentSearches();
+  }
+
   Future<void> loadCurrentLocation() async {
     isLoading = true;
     errorMessage = null;
@@ -67,8 +98,12 @@ class CustomerProvider extends ChangeNotifier {
   }
 
   Future<void> searchMedicine(String query) async {
+    final trimmed = query.trim();
+    if (trimmed.isNotEmpty) {
+      addRecentSearch(trimmed);
+    }
     await _searchSubscription?.cancel();
-    if (query.trim().isEmpty) {
+    if (trimmed.isEmpty) {
       searchResults = [];
       notifyListeners();
       return;
