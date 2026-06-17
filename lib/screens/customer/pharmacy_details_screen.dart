@@ -120,6 +120,31 @@ class PharmacyDetailsScreen extends StatelessWidget {
                     ),
                   ],
                 ),
+                if (currentPharmacy.deliveryAvailable) ...[
+                  const SizedBox(height: 14),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.teal.withAlpha((0.08 * 255).round()),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.teal.withAlpha((0.2 * 255).round())),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.delivery_dining_outlined, color: Colors.teal.shade700, size: 20),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Home delivery available${currentPharmacy.deliveryFee > 0 ? ' — ₹${currentPharmacy.deliveryFee.toStringAsFixed(0)} fee' : ''}',
+                          style: TextStyle(
+                            color: Colors.teal.shade800,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (currentPharmacy.reviewCount > 0) ...[
                   const SizedBox(height: 14),
                   CustomerSurfaceCard(
@@ -290,7 +315,7 @@ class PharmacyDetailsScreen extends StatelessWidget {
                       const SizedBox(height: 12),
                       FilledButton.icon(
                         icon: const Icon(Icons.event_available_outlined),
-                        label: const Text('Reserve for pickup'),
+                        label: const Text('Reserve / Order'),
                         onPressed: stock.isAvailable
                             ? () {
                                 Navigator.push(

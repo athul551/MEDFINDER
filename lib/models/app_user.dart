@@ -11,6 +11,7 @@ class AppUser {
     required this.role,
     required this.createdAt,
     this.profileImageUrl,
+    this.defaultAddress,
   });
 
   final String uid;
@@ -20,6 +21,7 @@ class AppUser {
   final UserRole role;
   final DateTime createdAt;
   final String? profileImageUrl;
+  final String? defaultAddress;
 
   factory AppUser.fromMap(Map<String, dynamic> map) {
     return AppUser(
@@ -30,6 +32,7 @@ class AppUser {
       role: UserRole.fromString(map['role'] as String? ?? ''),
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       profileImageUrl: map['profileImageUrl'] as String?,
+      defaultAddress: map['defaultAddress'] as String?,
     );
   }
 
@@ -45,6 +48,9 @@ class AppUser {
     if (profileImageUrl != null) {
       data['profileImageUrl'] = profileImageUrl;
     }
+    if (defaultAddress != null) {
+      data['defaultAddress'] = defaultAddress;
+    }
     return data;
   }
 
@@ -53,6 +59,7 @@ class AppUser {
     String? email,
     String? phone,
     String? profileImageUrl,
+    String? defaultAddress,
   }) {
     return AppUser(
       uid: uid,
@@ -62,6 +69,7 @@ class AppUser {
       role: role,
       createdAt: createdAt,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      defaultAddress: defaultAddress ?? this.defaultAddress,
     );
   }
 }

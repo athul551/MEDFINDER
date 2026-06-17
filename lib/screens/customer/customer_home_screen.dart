@@ -837,7 +837,7 @@ class _MonthlyBarChart extends StatelessWidget {
                   Text(
                     '${entry.value}',
                     style: TextStyle(
-                      fontSize: 9,
+                      fontSize: 10,
                       fontWeight: FontWeight.w600,
                       color: Colors.grey.shade600,
                     ),
@@ -861,7 +861,7 @@ class _MonthlyBarChart extends StatelessWidget {
                   Text(
                     entry.key.split(' ').first,
                     style: TextStyle(
-                      fontSize: 9,
+                      fontSize: 10,
                       color: Colors.grey.shade600,
                       fontWeight: FontWeight.w500,
                     ),

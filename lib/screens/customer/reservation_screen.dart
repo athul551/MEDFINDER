@@ -35,13 +35,27 @@ class ReservationScreen extends StatefulWidget {
 class _ReservationScreenState extends State<ReservationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _quantityController = TextEditingController(text: '1');
+  final _addressController = TextEditingController();
+  final _notesController = TextEditingController();
   DateTime _pickupTime = DateTime.now().add(const Duration(hours: 2));
   Uint8List? _prescriptionBytes;
   bool _isSaving = false;
+  bool _isDelivery = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final user = context.read<AppAuthProvider>().appUser;
+    if (user?.defaultAddress != null) {
+      _addressController.text = user!.defaultAddress!;
+    }
+  }
 
   @override
   void dispose() {
     _quantityController.dispose();
+    _addressController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -103,16 +117,25 @@ class _ReservationScreenState extends State<ReservationScreen> {
         reservedAt: DateTime.now(),
         pickupTime: _pickupTime,
         prescriptionUrl: prescriptionUrl,
+        isDelivery: _isDelivery,
+        deliveryAddress:
+            _isDelivery ? _addressController.text.trim() : null,
+        deliveryFee: _isDelivery ? widget.pharmacy.deliveryFee : null,
+        deliveryNotes:
+            _isDelivery ? _notesController.text.trim() : null,
       );
       final reservationId = await firestore.createReservation(reservation);
       if (mounted) {
-        showAppSnackBar(context, 'Reservation request sent.');
+        final msg = _isDelivery
+            ? 'Delivery request sent.'
+            : 'Reservation request sent.';
+        showAppSnackBar(context, msg);
         final shouldReview = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: const Text('Rate your reservation?'),
+            title: const Text('Rate your experience?'),
             content: const Text(
-              'Would you like to rate your reservation experience at this pharmacy?',
+              'Would you like to rate your experience at this pharmacy?',
             ),
             actions: [
               TextButton(
@@ -156,7 +179,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
         elevation: 0,
         backgroundColor: Colors.transparent,
         title: Text(
-          'Reserve Medicine',
+          _isDelivery ? 'Request Delivery' : 'Reserve Medicine',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.teal.shade900,
@@ -210,7 +233,83 @@ class _ReservationScreenState extends State<ReservationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Reservation Details',
+                      'Delivery Method',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.teal.shade900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _MethodButton(
+                            icon: Icons.store_outlined,
+                            label: 'Pickup',
+                            selected: !_isDelivery,
+                            onTap: () => setState(() => _isDelivery = false),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _MethodButton(
+                            icon: Icons.delivery_dining_outlined,
+                            label: 'Delivery',
+                            selected: _isDelivery,
+                            onTap: widget.pharmacy.deliveryAvailable
+                                ? () => setState(() => _isDelivery = true)
+                                : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (!widget.pharmacy.deliveryAvailable) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        'Delivery not available from this pharmacy',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                    if (_isDelivery && widget.pharmacy.deliveryFee > 0) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.withAlpha((0.08 * 255).round()),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline,
+                                size: 18, color: Colors.teal.shade700),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Delivery fee: ₹${widget.pharmacy.deliveryFee.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Colors.teal.shade700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              CustomerSurfaceCard(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Order Details',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w700,
@@ -243,13 +342,17 @@ class _ReservationScreenState extends State<ReservationScreen> {
                           Row(
                             children: [
                               Icon(
-                                Icons.schedule,
+                                _isDelivery
+                                    ? Icons.delivery_dining_outlined
+                                    : Icons.schedule,
                                 color: Colors.teal.shade700,
                                 size: 20,
                               ),
                               const SizedBox(width: 12),
                               Text(
-                                'Pickup time',
+                                _isDelivery
+                                    ? 'Preferred delivery time'
+                                    : 'Pickup time',
                                 style: TextStyle(
                                   fontWeight: FontWeight.w600,
                                   color: Colors.teal.shade900,
@@ -258,7 +361,8 @@ class _ReservationScreenState extends State<ReservationScreen> {
                               ),
                               const Spacer(),
                               IconButton(
-                                icon: const Icon(Icons.edit_calendar_outlined),
+                                icon:
+                                    const Icon(Icons.edit_calendar_outlined),
                                 onPressed: _selectPickupTime,
                                 color: Colors.teal.shade700,
                               ),
@@ -275,6 +379,27 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         ],
                       ),
                     ),
+                    if (_isDelivery) ...[
+                      const SizedBox(height: 20),
+                      AppTextField(
+                        controller: _addressController,
+                        label: 'Delivery address',
+                        maxLines: 3,
+                        validator: (value) {
+                          if (_isDelivery &&
+                              (value == null || value.trim().isEmpty)) {
+                            return 'Enter a delivery address';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      AppTextField(
+                        controller: _notesController,
+                        label: 'Delivery notes (optional)',
+                        maxLines: 2,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -320,16 +445,70 @@ class _ReservationScreenState extends State<ReservationScreen> {
                   ],
                 ),
               ),
-            const SizedBox(height: 24),
-            AppButton(
-              label: 'Confirm reservation',
-              icon: Icons.check_circle_outline,
-              isLoading: _isSaving,
-              onPressed: _reserve,
+              const SizedBox(height: 24),
+              AppButton(
+                label: _isDelivery ? 'Request delivery' : 'Confirm reservation',
+                icon: _isDelivery
+                    ? Icons.delivery_dining_outlined
+                    : Icons.check_circle_outline,
+                isLoading: _isSaving,
+                onPressed: _reserve,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MethodButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  const _MethodButton({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: selected
+              ? Colors.teal.withAlpha((0.1 * 255).round())
+              : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? Colors.teal : Colors.grey.shade200,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: selected ? Colors.teal.shade700 : Colors.grey,
+              size: 28,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.teal.shade700 : Colors.grey.shade600,
+                fontSize: 14,
+              ),
             ),
           ],
         ),
-      ),
       ),
     );
   }

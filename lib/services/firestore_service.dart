@@ -345,13 +345,19 @@ class FirestoreService {
       reservedAt: DateTime.now(),
       pickupTime: reservation.pickupTime,
       prescriptionUrl: reservation.prescriptionUrl,
+      isDelivery: reservation.isDelivery,
+      deliveryAddress: reservation.deliveryAddress,
+      deliveryFee: reservation.deliveryFee,
+      deliveryNotes: reservation.deliveryNotes,
     );
     await doc.set(saved.toMap());
+    final msg = saved.isDelivery
+        ? '${reservation.medicineName} delivery requested from ${reservation.pharmacyName}.'
+        : '${reservation.medicineName} was reserved at ${reservation.pharmacyName}.';
     await createNotification(
       userId: reservation.userId,
-      title: 'Reservation created',
-      message:
-          '${reservation.medicineName} was reserved at ${reservation.pharmacyName}.',
+      title: saved.isDelivery ? 'Delivery requested' : 'Reservation created',
+      message: msg,
     );
     return doc.id;
   }

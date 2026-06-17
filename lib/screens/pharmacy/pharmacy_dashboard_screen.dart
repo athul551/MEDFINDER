@@ -8,6 +8,7 @@ import '../../providers/app_auth_provider.dart';
 import '../../providers/pharmacy_provider.dart';
 import '../../services/firestore_service.dart';
 import '../../utils/app_constants.dart';
+import '../../utils/snackbars.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/loading_view.dart';
 import '../../widgets/stock_card.dart';
@@ -170,6 +171,11 @@ class _StockOverview extends StatelessWidget {
                 AnimatedStaggerItem(
                   delay: 150,
                   child: _DashboardAnalytics(pharmacy: pharmacy, stock: stock),
+                ),
+                const SizedBox(height: 20),
+                AnimatedStaggerItem(
+                  delay: 180,
+                  child: _DeliverySettingsCard(pharmacy: pharmacy),
                 ),
                 const SizedBox(height: 24),
                 const AnimatedStaggerItem(
@@ -887,6 +893,153 @@ class _WeeklyBarChart extends StatelessWidget {
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+}
+
+class _DeliverySettingsCard extends StatefulWidget {
+  final Pharmacy pharmacy;
+
+  const _DeliverySettingsCard({required this.pharmacy});
+
+  @override
+  State<_DeliverySettingsCard> createState() => _DeliverySettingsCardState();
+}
+
+class _DeliverySettingsCardState extends State<_DeliverySettingsCard> {
+  late bool _deliveryAvailable;
+  late TextEditingController _feeController;
+
+  @override
+  void initState() {
+    super.initState();
+    _deliveryAvailable = widget.pharmacy.deliveryAvailable;
+    _feeController = TextEditingController(
+      text: widget.pharmacy.deliveryFee > 0
+          ? widget.pharmacy.deliveryFee.toStringAsFixed(0)
+          : '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _feeController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final fee = double.tryParse(_feeController.text) ?? 0;
+    final updated = widget.pharmacy.copyWith(
+      deliveryAvailable: _deliveryAvailable,
+      deliveryFee: fee,
+    );
+    await context.read<FirestoreService>().updatePharmacy(updated);
+    if (mounted) {
+      showAppSnackBar(
+        context,
+        _deliveryAvailable ? 'Delivery enabled' : 'Delivery disabled',
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CustomerSurfaceCard(
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: _deliveryAvailable
+                      ? Colors.teal.withAlpha((0.1 * 255).round())
+                      : Colors.grey.withAlpha((0.1 * 255).round()),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.delivery_dining_outlined,
+                  color: _deliveryAvailable ? Colors.teal.shade700 : Colors.grey,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Text(
+                  'Home Delivery',
+                  style: TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF004D40),
+                  ),
+                ),
+              ),
+              Switch(
+                value: _deliveryAvailable,
+                activeColor: Colors.teal,
+                onChanged: (v) => setState(() => _deliveryAvailable = v),
+              ),
+            ],
+          ),
+          if (_deliveryAvailable) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Text(
+                  'Delivery fee (₹)',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const Spacer(),
+                SizedBox(
+                  width: 100,
+                  child: TextField(
+                    controller: _feeController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      hintText: '0',
+                      hintStyle: TextStyle(color: Colors.grey.shade400),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 10,
+                        horizontal: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 14),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: _save,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF00796B),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: const Text('Save'),
+            ),
+          ),
+        ],
       ),
     );
   }

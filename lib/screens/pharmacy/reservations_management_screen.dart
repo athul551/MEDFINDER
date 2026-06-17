@@ -100,7 +100,8 @@ class ReservationsManagementScreen extends StatelessWidget {
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFF00796B),
                             ),
-                            child: const Text('Picked up'),
+                            child: Text(
+                                reservation.isDelivery ? 'Delivered' : 'Picked up'),
                           ),
                       ],
                     ),

@@ -56,10 +56,31 @@ class ReservationCard extends StatelessWidget {
         const SizedBox(height: 6),
         _InfoRow(icon: Icons.production_quantity_limits_outlined, text: 'Quantity: ${reservation.quantity}'),
         const SizedBox(height: 6),
-        _InfoRow(
-          icon: Icons.schedule_outlined,
-          text: 'Pickup: ${DateFormat.yMMMd().add_jm().format(reservation.pickupTime)}',
-        ),
+        if (reservation.isDelivery) ...[
+          _InfoRow(
+            icon: Icons.delivery_dining_outlined,
+            text: 'Delivery: ${reservation.deliveryAddress ?? 'Address not provided'}',
+          ),
+          if (reservation.deliveryFee != null && reservation.deliveryFee! > 0) ...[
+            const SizedBox(height: 6),
+            _InfoRow(
+              icon: Icons.monetization_on_outlined,
+              text: 'Delivery fee: ₹${reservation.deliveryFee!.toStringAsFixed(0)}',
+            ),
+          ],
+        ] else ...[
+          _InfoRow(
+            icon: Icons.schedule_outlined,
+            text: 'Pickup: ${DateFormat.yMMMd().add_jm().format(reservation.pickupTime)}',
+          ),
+        ],
+        if (reservation.isDelivery && reservation.deliveryNotes != null && reservation.deliveryNotes!.isNotEmpty) ...[
+          const SizedBox(height: 6),
+          _InfoRow(
+            icon: Icons.notes_outlined,
+            text: 'Note: ${reservation.deliveryNotes}',
+          ),
+        ],
         if (reservation.prescriptionUrl != null) ...[
           const SizedBox(height: 6),
           Row(

@@ -15,6 +15,10 @@ class Reservation {
     required this.reservedAt,
     required this.pickupTime,
     this.prescriptionUrl,
+    this.isDelivery = false,
+    this.deliveryAddress,
+    this.deliveryFee,
+    this.deliveryNotes,
   });
 
   final String reservationId;
@@ -28,6 +32,10 @@ class Reservation {
   final DateTime reservedAt;
   final DateTime pickupTime;
   final String? prescriptionUrl;
+  final bool isDelivery;
+  final String? deliveryAddress;
+  final double? deliveryFee;
+  final String? deliveryNotes;
 
   factory Reservation.fromMap(Map<String, dynamic> map, {String? id}) {
     return Reservation(
@@ -42,6 +50,10 @@ class Reservation {
       reservedAt: (map['reservedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       pickupTime: (map['pickupTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
       prescriptionUrl: map['prescriptionUrl'] as String?,
+      isDelivery: map['isDelivery'] as bool? ?? false,
+      deliveryAddress: map['deliveryAddress'] as String?,
+      deliveryFee: (map['deliveryFee'] as num?)?.toDouble(),
+      deliveryNotes: map['deliveryNotes'] as String?,
     );
   }
 
@@ -58,6 +70,10 @@ class Reservation {
       'reservedAt': Timestamp.fromDate(reservedAt),
       'pickupTime': Timestamp.fromDate(pickupTime),
       'prescriptionUrl': prescriptionUrl,
+      'isDelivery': isDelivery,
+      'deliveryAddress': deliveryAddress,
+      'deliveryFee': deliveryFee,
+      'deliveryNotes': deliveryNotes,
     };
   }
 }

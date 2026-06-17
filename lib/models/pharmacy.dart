@@ -17,6 +17,8 @@ class Pharmacy {
     this.pricingAvg = 0,
     this.serviceAvg = 0,
     this.deliveryAvg = 0,
+    this.deliveryAvailable = false,
+    this.deliveryFee = 0,
   });
 
   final String pharmacyId;
@@ -34,6 +36,8 @@ class Pharmacy {
   final double pricingAvg;
   final double serviceAvg;
   final double deliveryAvg;
+  final bool deliveryAvailable;
+  final double deliveryFee;
 
   factory Pharmacy.fromMap(Map<String, dynamic> map, {String? id}) {
     return Pharmacy(
@@ -52,6 +56,8 @@ class Pharmacy {
       pricingAvg: (map['pricingAvg'] as num?)?.toDouble() ?? 0,
       serviceAvg: (map['serviceAvg'] as num?)?.toDouble() ?? 0,
       deliveryAvg: (map['deliveryAvg'] as num?)?.toDouble() ?? 0,
+      deliveryAvailable: map['deliveryAvailable'] as bool? ?? false,
+      deliveryFee: (map['deliveryFee'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -72,6 +78,8 @@ class Pharmacy {
       'pricingAvg': pricingAvg,
       'serviceAvg': serviceAvg,
       'deliveryAvg': deliveryAvg,
+      'deliveryAvailable': deliveryAvailable,
+      'deliveryFee': deliveryFee,
     };
   }
 
@@ -88,6 +96,8 @@ class Pharmacy {
     double? pricingAvg,
     double? serviceAvg,
     double? deliveryAvg,
+    bool? deliveryAvailable,
+    double? deliveryFee,
   }) {
     return Pharmacy(
       pharmacyId: pharmacyId,
@@ -105,6 +115,8 @@ class Pharmacy {
       pricingAvg: pricingAvg ?? this.pricingAvg,
       serviceAvg: serviceAvg ?? this.serviceAvg,
       deliveryAvg: deliveryAvg ?? this.deliveryAvg,
+      deliveryAvailable: deliveryAvailable ?? this.deliveryAvailable,
+      deliveryFee: deliveryFee ?? this.deliveryFee,
     );
   }
 }

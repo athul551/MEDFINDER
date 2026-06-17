@@ -204,6 +204,7 @@ class _MedicineSearchScreenState extends State<MedicineSearchScreen> {
             /// FUZZY SUGGESTIONS
             if (suggestions.isNotEmpty && _searchController.text.isNotEmpty)
               Container(
+                constraints: const BoxConstraints(maxHeight: 220),
                 margin: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 10,
@@ -218,7 +219,9 @@ class _MedicineSearchScreenState extends State<MedicineSearchScreen> {
                     ),
                   ],
                 ),
-                child: Column(
+                child: ListView(
+                  shrinkWrap: true,
+                  padding: EdgeInsets.zero,
                   children: suggestions.take(5).map((item) {
                     return ListTile(
                       leading: CircleAvatar(
