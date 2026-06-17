@@ -28,13 +28,25 @@ class MySubscriptionsScreen extends StatelessWidget {
         elevation: 0,
         iconTheme: IconThemeData(color: Colors.teal.shade900),
       ),
-      body: StreamBuilder<List<MedicineSubscription>>(
-        stream: context.read<FirestoreService>().watchSubscriptionsForUser(
+      body: FutureBuilder<List<MedicineSubscription>>(
+        future: context.read<FirestoreService>().getSubscriptionsForUser(
               user.uid,
             ),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  'Error: ${snapshot.error}',
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
           }
           final subs = snapshot.data ?? [];
           if (subs.isEmpty) {
@@ -509,18 +521,20 @@ class _SubscriptionCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              SizedBox(
-                height: 42,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red.shade300,
-                    side: BorderSide(color: Colors.red.shade200),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+              Expanded(
+                child: SizedBox(
+                  height: 42,
+                  child: OutlinedButton(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red.shade300,
+                      side: BorderSide(color: Colors.red.shade200),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
+                    onPressed: () => _deleteSubscription(context),
+                    child: const Icon(Icons.delete_outline, size: 18),
                   ),
-                  onPressed: () => _deleteSubscription(context),
-                  child: const Icon(Icons.delete_outline, size: 18),
                 ),
               ),
             ],

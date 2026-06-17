@@ -646,15 +646,25 @@ class FirestoreService {
     return _subscriptions.doc(subscriptionId).delete();
   }
 
+  Future<List<MedicineSubscription>> getSubscriptionsForUser(String userId) async {
+    final snapshot =
+        await _subscriptions.where('userId', isEqualTo: userId).get();
+    final list = snapshot.docs
+        .map((doc) => MedicineSubscription.fromMap(doc.data(), id: doc.id))
+        .toList();
+    list.sort((a, b) => a.nextRefillDate.compareTo(b.nextRefillDate));
+    return list;
+  }
+
   Stream<List<MedicineSubscription>> watchSubscriptionsForUser(String userId) {
     return _subscriptions
         .where('userId', isEqualTo: userId)
-        .orderBy('nextRefillDate', descending: false)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs
               .map((doc) => MedicineSubscription.fromMap(doc.data(), id: doc.id))
-              .toList(),
+              .toList()
+            ..sort((a, b) => a.nextRefillDate.compareTo(b.nextRefillDate)),
         );
   }
 }
