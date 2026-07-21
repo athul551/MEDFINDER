@@ -12,6 +12,7 @@ exports.askJasper = onCall({
 }, async (request) => {
   try {
     const question = request.data.question;
+    const history = request.data.history || [];
 
     if (!question || typeof question !== "string" ||
         question.trim().length === 0) {
@@ -52,53 +53,39 @@ exports.askJasper = onCall({
         })
         .get();
 
-    if (kbSnapshot.empty) {
-      return {
-        answer: "Jasper could not find a matching available medicine for " +
-                `"${question}". Please try again later or adjust the name.`,
-      };
-    }
-
     const matchedMedicineIds = [];
-    const medicineDetails = [];
-
-    kbSnapshot.forEach((doc) => {
-      matchedMedicineIds.push(doc.id);
-      medicineDetails.push(doc.data());
-    });
+    if (!kbSnapshot.empty) {
+      kbSnapshot.forEach((doc) => {
+        matchedMedicineIds.push(doc.id);
+      });
+    }
 
     // 3. Query available stock for these medicines
-    // Note: Firestore 'in' queries support max 10 elements. We have at most 5.
-    const stockSnapshot = await db.collection("stock")
-        .where("medicineId", "in", matchedMedicineIds)
-        .where("isAvailable", "==", true)
-        .get();
-
-    if (stockSnapshot.empty) {
-      return {
-        answer: "Jasper could not find a matching available medicine for " +
-                `"${question}". Please try again later or adjust the name.`,
-      };
-    }
-
     const stockItems = [];
     const pharmacyIdsSet = new Set();
 
-    stockSnapshot.forEach((doc) => {
-      const data = doc.data();
-      stockItems.push(data);
-      if (data.pharmacyId) {
-        pharmacyIdsSet.add(data.pharmacyId);
+    if (matchedMedicineIds.length > 0) {
+      const stockSnapshot = await db.collection("stock")
+          .where("medicineId", "in", matchedMedicineIds)
+          .where("isAvailable", "==", true)
+          .get();
+
+      if (!stockSnapshot.empty) {
+        stockSnapshot.forEach((doc) => {
+          const data = doc.data();
+          stockItems.push(data);
+          if (data.pharmacyId) {
+            pharmacyIdsSet.add(data.pharmacyId);
+          }
+        });
       }
-    });
+    }
 
     const pharmacyIds = Array.from(pharmacyIdsSet);
 
     // 4. Query pharmacies
     const pharmacies = {};
     if (pharmacyIds.length > 0) {
-      // Chunking if >10 pharmacies just in case,
-      // though we only have up to 5 medicines.
       for (let i = 0; i < pharmacyIds.length; i += 10) {
         const chunk = pharmacyIds.slice(i, i + 10);
         const pharmSnapshot = await db.collection("pharmacies")
@@ -112,34 +99,49 @@ exports.askJasper = onCall({
     }
 
     // 5. Build prompt
-    let promptContext = "You are Jasper, the MedFinder assistant.\n" +
-      "Answer any question the user asks.\n" +
-      "If the question is about medicine availability or pharmacies, " +
-      "use the store data below.\n" +
-      "For general questions about medicines, side effects, dosage, " +
-      "or health, provide helpful information.\n\n" +
-      `Question: ${question}\n\nAvailable store data:\n`;
+    let storeDataString = "";
+    if (stockItems.length > 0) {
+      stockItems.forEach((stock) => {
+        const pharm = pharmacies[stock.pharmacyId];
+        const pharmName = (pharm && pharm.name) || "Unknown pharmacy";
+        const pharmAddress = (pharm && pharm.address) || "unknown";
+        const pharmPhone = (pharm && pharm.phone) || "unknown";
+        const price = stock.price != null ?
+          Number(stock.price).toFixed(2) : "unknown";
 
-    stockItems.forEach((stock) => {
-      const pharm = pharmacies[stock.pharmacyId];
-      const pharmName = (pharm && pharm.name) || "Unknown pharmacy";
-      const pharmAddress = (pharm && pharm.address) || "unknown";
-      const pharmPhone = (pharm && pharm.phone) || "unknown";
-      const price = stock.price != null ?
-        Number(stock.price).toFixed(2) : "unknown";
+        storeDataString += `- ${stock.medicineName} at ${pharmName}: ` +
+          `${stock.quantity} unit(s) available, price ${price}, ` +
+          `address ${pharmAddress}, phone ${pharmPhone}.\n`;
+      });
+    } else {
+      storeDataString = "(No matching stock data available)";
+    }
 
-      promptContext += `- ${stock.medicineName} at ${pharmName}: ` +
-        `${stock.quantity} unit(s) available, price ${price}, ` +
-        `address ${pharmAddress}, phone ${pharmPhone}.\n`;
-    });
-
-    promptContext += "\nWrite a concise, friendly, and helpful " +
-      "answer as Jasper.";
+    const sysPrompt = "You are Jasper, the MedFinder assistant.\n\n" +
+      "IMPORTANT INSTRUCTIONS:\n" +
+      "1. Answer any question the user asks helpfully and concisely.\n" +
+      "2. If the user asks about medicine availability, pharmacies, or stock, use the store data provided below.\n" +
+      "3. For general medical questions (side effects, dosage, health), provide helpful, safe information.\n" +
+      "4. Do NOT introduce yourself (e.g., \"Hi, I am Jasper\") unless it is the very first message of the conversation.\n" +
+      "5. Use the conversation history to understand context for follow-up questions (e.g., if the user asks \"What is the price?\", check the history for the medicine they are referring to).\n" +
+      "6. Write concise, friendly, and helpful answers in plain short sentences. Do not use overly long paragraphs.\n\n" +
+      "AVAILABLE STORE DATA:\n" +
+      "====================================\n" +
+      storeDataString + "\n" +
+      "====================================\n";
 
     // 6. Call Groq
     const groq = new Groq({apiKey: groqApiKey});
+    
+    const messages = [{ role: "system", content: sysPrompt }];
+    if (history.length > 0) {
+      messages.push(...history);
+    } else {
+      messages.push({ role: "user", content: question });
+    }
+
     const completion = await groq.chat.completions.create({
-      messages: [{role: "user", content: promptContext}],
+      messages: messages,
       model: "llama-3.3-70b-versatile",
     });
 

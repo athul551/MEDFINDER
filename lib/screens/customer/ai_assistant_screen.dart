@@ -48,13 +48,22 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
       _errorMessage = null;
       _controller.clear();
     });
+
+    final historyPayload = _messages
+        .where((m) => !m.isError)
+        .map((m) => {
+              'role': m.isUser ? 'user' : 'assistant',
+              'content': m.text,
+            })
+        .toList();
+
     final aiService = AIAssistantService(
       firestoreService: context.read<FirestoreService>(),
     );
     await _scrollToBottom();
 
     try {
-      final answer = await aiService.answerQuestion(question);
+      final answer = await aiService.answerQuestion(question, history: historyPayload);
       if (!mounted) return;
       setState(() {
         _messages.add(ChatMessage(text: answer, isUser: false));

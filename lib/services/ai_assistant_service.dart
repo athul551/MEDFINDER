@@ -5,7 +5,7 @@ import 'firestore_service.dart';
 class AIAssistantService {
   AIAssistantService({FirestoreService? firestoreService});
 
-  Future<String> answerQuestion(String question) async {
+  Future<String> answerQuestion(String question, {List<Map<String, String>> history = const []}) async {
     final prompt = question.trim();
     if (prompt.isEmpty) {
       return 'Ask Jasper a question such as "Where can I find Dolo 650?" or "Which pharmacy near me has insulin?"';
@@ -15,6 +15,7 @@ class AIAssistantService {
       final callable = FirebaseFunctions.instance.httpsCallable('askJasper');
       final result = await callable.call(<String, dynamic>{
         'question': prompt,
+        'history': history,
       });
 
       final data = result.data as Map<String, dynamic>? ?? {};
