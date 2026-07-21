@@ -27,19 +27,19 @@
 // Load environment variables from .env (same as Firebase tooling)
 // ---------------------------------------------------------------------------
 const path = require("path");
-require("dotenv").config({ path: path.resolve(__dirname, ".env") });
+require("dotenv").config({path: path.resolve(__dirname, ".env")});
 
 // ---------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------
-const admin = require("firebase-admin");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const {GoogleGenerativeAI} = require("@google/generative-ai");
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 const EMBEDDING_MODEL = "gemini-embedding-001";
-const EMBEDDING_DIMENSIONS = 768; // Firestore supports max 2048 dims; we use 768 via outputDimensionality
+const EMBEDDING_DIMENSIONS = 768; // Firestore supports max 2048 dims;
+// we use 768 via outputDimensionality
 const DELAY_MS = 200; // delay between Gemini API calls to avoid rate limiting
 const SOURCE_COLLECTION = "medicines";
 const TARGET_COLLECTION = "medicine_kb";
@@ -48,13 +48,24 @@ const TARGET_COLLECTION = "medicine_kb";
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Sleep for `ms` milliseconds. */
+/**
+ * Sleep for `ms` milliseconds.
+ * @param {number} ms - The milliseconds to sleep.
+ * @return {Promise<void>} Resolves when the sleep duration completes.
+ */
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Build the plain-text string sent to the embedding model. */
-function buildTextForEmbedding({ name, category, description }) {
+/**
+ * Build the plain-text string sent to the embedding model.
+ * @param {Object} params - The medicine details.
+ * @param {string} params.name - The name.
+ * @param {string} params.category - The category.
+ * @param {string} params.description - The description.
+ * @return {string} The text to embed.
+ */
+function buildTextForEmbedding({name, category, description}) {
   return `${name}. Category: ${category}. ${description}`;
 }
 
@@ -62,6 +73,10 @@ function buildTextForEmbedding({ name, category, description }) {
 // Main
 // ---------------------------------------------------------------------------
 
+/**
+ * Main script execution function.
+ * @return {Promise<void>}
+ */
 async function main() {
   // --- Validate environment ------------------------------------------------
   const geminiApiKey = process.env.GEMINI_API_KEY;
@@ -71,28 +86,13 @@ async function main() {
   }
 
   // --- Initialise Firebase Admin -------------------------------------------
-  // Prefer a service account key (more reliable on Windows due to TLS issues
-  // with the ADC OAuth2 token endpoint). Falls back to ADC if no key is set.
-  const projectId = process.env.FIREBASE_PROJECT_ID || "medfinder-ef4f1";
-  const serviceAccountKeyPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-
-  let credential;
-  if (serviceAccountKeyPath) {
-    const keyPath = path.resolve(__dirname, serviceAccountKeyPath);
-    console.log(`🔑 Using service account key: ${keyPath}`);
-    credential = admin.credential.cert(require(keyPath));
-  } else {
-    console.log("🔑 Using Application Default Credentials (ADC)");
-    credential = admin.credential.applicationDefault();
-  }
-
-  admin.initializeApp({ credential, projectId });
-  const db = admin.firestore();
-  const FieldValue = admin.firestore.FieldValue;
+  require("./index.js");
+  const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+  const db = getFirestore();
 
   // --- Initialise Gemini client --------------------------------------------
   const genAI = new GoogleGenerativeAI(geminiApiKey);
-  const embeddingModel = genAI.getGenerativeModel({ model: EMBEDDING_MODEL });
+  const embeddingModel = genAI.getGenerativeModel({model: EMBEDDING_MODEL});
 
   // --- Fetch all medicines -------------------------------------------------
   console.log(`\n📦 Fetching documents from '${SOURCE_COLLECTION}' collection…`);
@@ -100,17 +100,24 @@ async function main() {
   try {
     snapshot = await db.collection(SOURCE_COLLECTION).get();
   } catch (err) {
-    console.error(`❌ Failed to read '${SOURCE_COLLECTION}' collection:`, err.message);
+    console.error(
+        `❌ Failed to read '${SOURCE_COLLECTION}' collection:`,
+        err.message,
+    );
     process.exit(1);
   }
 
   if (snapshot.empty) {
-    console.warn(`⚠️  No documents found in '${SOURCE_COLLECTION}'. Nothing to embed.`);
+    console.warn(
+        `⚠️  No documents found in '${SOURCE_COLLECTION}'. Nothing to embed.`,
+    );
     process.exit(0);
   }
 
   const docs = snapshot.docs;
-  console.log(`✅ Found ${docs.length} medicine document(s). Starting embedding…\n`);
+  console.log(
+      `✅ Found ${docs.length} medicine document(s). Starting embedding…\n`,
+  );
 
   // --- Process each document -----------------------------------------------
   let successCount = 0;
@@ -120,17 +127,19 @@ async function main() {
     const doc = docs[i];
     const data = doc.data();
 
-    const { medicineId, name, category, description } = data;
-    const docId = medicineId || doc.id; // fall back to Firestore doc ID if field missing
+    const {medicineId, name, category, description} = data;
+    // fall back to Firestore doc ID if field missing
+    const docId = medicineId || doc.id;
 
     try {
       // Build embedding input text
-      const inputText = buildTextForEmbedding({ name, category, description });
+      const inputText = buildTextForEmbedding({name, category, description});
 
-      // Call Gemini embedding API (outputDimensionality truncates to 768 via MRL;
+      // Call Gemini embedding API
+      // (outputDimensionality truncates to 768 via MRL;
       // Firestore VectorValue supports at most 2048 dimensions)
       const result = await embeddingModel.embedContent({
-        content: { parts: [{ text: inputText }], role: "user" },
+        content: {parts: [{text: inputText}], role: "user"},
         taskType: "RETRIEVAL_DOCUMENT",
         outputDimensionality: EMBEDDING_DIMENSIONS,
       });
@@ -140,7 +149,8 @@ async function main() {
       // Sanity-check the dimension
       if (embeddingValues.length !== EMBEDDING_DIMENSIONS) {
         throw new Error(
-          `Unexpected embedding dimension: got ${embeddingValues.length}, expected ${EMBEDDING_DIMENSIONS}`
+            "Unexpected embedding dimension: got " + embeddingValues.length +
+          ", expected " + EMBEDDING_DIMENSIONS,
         );
       }
 
@@ -155,12 +165,13 @@ async function main() {
       });
 
       console.log(
-        `[${i + 1}/${docs.length}] ✅ Embedded ${docId} - ${name}`
+          `[${i + 1}/${docs.length}] ✅ Embedded ${docId} - ${name}`,
       );
       successCount++;
     } catch (err) {
       console.error(
-        `[${i + 1}/${docs.length}] ❌ Failed to embed ${docId} (${name || "unknown"}): ${err.message}`
+          `[${i + 1}/${docs.length}] ❌ Failed to embed ` +
+        `${docId} (${name || "unknown"}): ${err.message}`,
       );
       failCount++;
     }
@@ -181,7 +192,8 @@ async function main() {
 
   if (failCount > 0) {
     console.warn(
-      `⚠️  ${failCount} document(s) failed to embed. Check the logs above for details.`
+        `⚠️  ${failCount} document(s) failed to embed. ` +
+      `Check the logs above for details.`,
     );
   }
 
