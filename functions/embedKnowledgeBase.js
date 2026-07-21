@@ -87,7 +87,7 @@ async function main() {
 
   // --- Initialise Firebase Admin -------------------------------------------
   require("./index.js");
-  const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+  const {getFirestore, FieldValue} = require("firebase-admin/firestore");
   const db = getFirestore();
 
   // --- Initialise Gemini client --------------------------------------------

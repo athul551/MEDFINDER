@@ -8,7 +8,7 @@
  */
 
 const {setGlobalOptions} = require("firebase-functions");
-const { initializeApp, getApps } = require("firebase-admin/app");
+const {initializeApp, getApps} = require("firebase-admin/app");
 
 if (getApps().length === 0) {
   initializeApp();
