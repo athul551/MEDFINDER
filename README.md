@@ -1,149 +1,183 @@
-# MedFinder - Medicine Availability Finder
+# MedFinder
 
-A **Flutter** app for finding nearby pharmacies with medicine availability. Customers search for medicines, view stock at verified pharmacies, reserve for pickup, and get AI-powered assistance. Pharmacy owners manage inventory and reservations. Admins oversee the platform.
+MedFinder is a Flutter application that helps customers find medicines at nearby pharmacies. Customers can search medicine stock, reserve medicines, upload prescriptions, and ask Jasper, the built-in AI assistant, for help. Pharmacy owners manage their inventory and reservations, while administrators manage the platform.
 
 ## Features
 
-### Three Roles
+### Customers
 
-| Role | Capabilities |
-|---|---|
-| **Customer** | Search medicines with fuzzy matching, view stock at nearby pharmacies, reserve medicines with pickup time & prescription upload, track reservation history, multi-medicine hunt mode with route planning, AI assistant (Jasper), rate pharmacies, dark mode |
-| **Pharmacy Owner** | Dashboard with stock stats, add/edit medicines, manage reservations (approve/reject/pickup), view reviews |
-| **Admin** | View/manage pharmacies, users, medicine categories, all reservations |
+- Search medicines with fuzzy matching and autocomplete.
+- View available stock at verified pharmacies.
+- Find pharmacies near the customer's location.
+- Reserve medicines for pickup.
+- Upload a prescription when making a reservation.
+- Track reservation history and receive notifications.
+- Use Medicine Hunt mode to search for multiple medicines and plan a route.
+- Ask Jasper questions about medicines, availability, and pharmacies.
+- Automatically save Jasper chat history per signed-in user.
+- Review pharmacies with ratings for availability, pricing, service, and delivery.
+- Switch between light and dark themes.
 
-### Key Highlights
-- Medicine search with autocomplete & Levenshtein matching
-- Real-time stock availability at verified pharmacies
-- Medicine Hunt Mode — enter multiple medicines, get optimized route
-- Gemini AI-powered assistant for natural-language questions
-- Multi-dimensional pharmacy reviews (availability, pricing, service, delivery)
-- Dark/Light theme toggle (persisted)
+### Pharmacy owners
 
-## Tech Stack
+- Manage pharmacy medicine stock, prices, quantities, and expiry dates.
+- View inventory statistics.
+- Approve or reject reservations.
+- Mark reservations as picked up.
+- View customer reviews.
 
-| Layer | Technology |
-|---|---|
-| **Framework** | Flutter (Dart) |
-| **State Management** | Provider (ChangeNotifier) |
-| **Auth** | Firebase Authentication (email/password, anonymous guest) |
-| **Database** | Cloud Firestore |
-| **Storage** | Firebase Storage |
-| **Push** | Firebase Cloud Messaging |
-| **AI** | Google Generative AI (Gemini) |
-| **Maps** | google_maps_flutter |
-| **Location** | geolocator |
-| **Theme** | shared_preferences |
-| **Images** | image_picker |
+### Administrators
 
-## Project Structure
+- Manage users and pharmacies.
+- Verify pharmacies.
+- Manage medicines and categories.
+- View and manage platform reservations.
 
-```
-lib/
-├── main.dart                     # Entry point, routing, theme, providers
-├── firebase_options.dart         # Firebase config per platform
-├── models/                       # Data models
-│   ├── app_user.dart
-│   ├── pharmacy.dart
-│   ├── medicine.dart
-│   ├── stock_item.dart
-│   ├── reservation.dart
-│   ├── pharmacy_review.dart
-│   └── app_notification.dart
-├── providers/                    # State management
-│   ├── app_auth_provider.dart
-│   ├── customer_provider.dart
-│   ├── pharmacy_provider.dart
-│   ├── admin_provider.dart
-│   └── theme_provider.dart
-├── services/                     # Firebase & business logic
-│   ├── auth_service.dart
-│   ├── firestore_service.dart
-│   ├── storage_service.dart
-│   ├── location_service.dart
-│   ├── notification_service.dart
-│   └── ai_assistant_service.dart
-├── screens/                      # UI screens
-│   ├── auth/                     # Login, register, forgot password
-│   ├── customer/                 # Home, search, hunt, pharmacy list/details, reservations, reviews, AI assistant
-│   ├── pharmacy/                 # Dashboard, stock management, reservations, reviews
-│   ├── admin/                    # Dashboard, pharmacy verification
-│   ├── profile_screen.dart       # Shared profile (all roles)
-│   └── firebase_setup_screen.dart
-├── utils/                        # Constants, validators, snackbars, location utils
-└── widgets/                      # Reusable widgets (cards, badges, ratings, etc.)
-```
+## Technology
 
-## Prerequisites
+- **Flutter / Dart** - Cross-platform application
+- **Provider** - Application state management
+- **Firebase Authentication** - Email/password and anonymous guest sign-in
+- **Cloud Firestore** - Users, medicines, pharmacies, stock, reservations, reviews, notifications, and private AI chat history
+- **Firebase Storage** - Prescription and profile image uploads
+- **Firebase Cloud Messaging** - Push notifications
+- **Groq API** - Jasper AI assistant
+- **Google Maps** - Pharmacy locations and route planning
+- **Geolocator** - Device location
+- **Shared Preferences** - Local theme preferences
 
-- Flutter SDK >=3.3.0
-- Dart SDK >=3.3.0
+## Requirements
+
+- Flutter SDK 3.3.0 or later
+- Dart SDK 3.3.0 or later
 - A Firebase project
+- Android Studio or Xcode for mobile builds
+- A Google Maps API key for map features
+- A Groq API key for Jasper
 
-## Setup
+## Installation
 
-### 1. Firebase Configuration
-
-```bash
-# Login to Firebase
-firebase login
-
-# Configure Firebase for this project
-dart pub global activate flutterfire_cli
-flutterfire configure
-```
-
-### 2. Enable Firebase Services
-
-In Firebase Console:
-- **Authentication** > Sign-in method > Enable **Email/Password**
-- **Cloud Firestore** > Create database
-- **Cloud Storage** > Set up
-- **Cloud Messaging** (optional)
-
-### 3. API Keys
-
-**Groq AI Key** (optional — falls back to a configuration message):
-```bash
-flutter run --dart-define=GROQ_API_KEY=your_key_here
-```
-
-The app also loads `GROQ_API_KEY` from the local `.env` file. Restart the app after changing it.
-
-**Google Maps Key** (required for map view on mobile):
-- Android: `android/app/src/main/AndroidManifest.xml` — meta-data `com.google.android.geo.API_KEY`
-- iOS: `ios/Runner/AppDelegate.swift` or `ios/Runner/Info.plist`
-
-### 4. Deploy Security Rules
+Clone the repository and install the Flutter dependencies:
 
 ```bash
-firebase deploy --only firestore:rules,firestore:indexes
-firebase deploy --only storage
-```
-
-### 5. Run
-
-```bash
+git clone https://github.com/athul551/MEDFINDER.git
+cd MEDFINDER
 flutter pub get
-flutter run --dart-define=GEMINI_API_KEY=your_key_here
 ```
 
-## Firestore Security Rules
+## Firebase setup
 
-- **Users**: Read/update own doc; admins can manage all
-- **Pharmacies**: Create by owner with matching `ownerId`; owner/admin update; customer rating updates (limited fields only)
-- **Stock**: Create/update by owning pharmacy only
-- **Reservations**: Create by customer; read by customer, pharmacy, or admin; update by pharmacy/admin
-- **Reviews**: Create by customers with validated ratings (1–5); duplicate checking enforced
+1. Create or select a Firebase project.
+2. Install and authenticate with the Firebase CLI:
 
-## Firestore Collections
+   ```bash
+   npm install -g firebase-tools
+   firebase login
+   ```
 
-| Collection | Key Fields |
-|---|---|
-| `users` | `uid`, `name`, `email`, `phone`, `role`, `createdAt`, `profileImageUrl` |
-| `pharmacies` | `pharmacyId`, `ownerId`, `name`, `address`, `phone`, `lat/lng`, `isVerified`, ratings |
-| `medicines` | `medicineId`, `name`, `category`, `description` |
-| `stock` | `stockId`, `pharmacyId`, `medicineId`, `medicineName`, `quantity`, `price`, `expiryDate`, `isAvailable` |
-| `reservations` | `reservationId`, `userId`, `pharmacyId`, `medicineId`, `status`, `reservedAt`, `pickupTime`, `prescriptionUrl` |
-| `reviews` | `reviewId`, `pharmacyId`, `userId`, multi‑dim ratings, `comment`, `createdAt` |
-| `notifications` | `notificationId`, `userId`, `title`, `message`, `createdAt`, `isRead` |
+3. Install the FlutterFire CLI and configure the supported platforms:
+
+   ```bash
+   dart pub global activate flutterfire_cli
+   flutterfire configure
+   ```
+
+4. Enable these Firebase services in the Firebase Console:
+
+   - Authentication: Email/Password
+   - Cloud Firestore
+   - Cloud Storage
+   - Cloud Messaging (optional)
+
+5. Deploy the Firestore and Storage rules and indexes:
+
+   ```bash
+   firebase deploy --only firestore:rules,firestore:indexes,storage
+   ```
+
+The Firestore rules protect user-owned data. Jasper messages are stored under each user's document and can only be read or written by that authenticated user.
+
+## Environment configuration
+
+Create a `.env` file in the project root:
+
+```env
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=openai/gpt-oss-120b
+```
+
+Do not commit `.env` or API keys to GitHub. Alternatively, provide the Groq key at runtime:
+
+```bash
+flutter run --dart-define=GROQ_API_KEY=your_groq_api_key
+```
+
+## Google Maps configuration
+
+Add a Google Maps API key to the platform-specific configuration:
+
+- **Android:** `android/app/src/main/AndroidManifest.xml`
+- **iOS:** `ios/Runner/AppDelegate.swift` or the iOS project configuration
+
+Enable the required Maps SDKs and billing settings in Google Cloud Console.
+
+## Running the app
+
+```bash
+flutter run
+```
+
+For a specific platform:
+
+```bash
+flutter run -d chrome
+flutter run -d android
+flutter run -d ios
+```
+
+## Cloud Functions
+
+The `functions/` directory contains Firebase Cloud Functions used by the project. To install dependencies and deploy them:
+
+```bash
+cd functions
+npm install
+npm run deploy
+```
+
+## Project structure
+
+```text
+lib/
+├── main.dart
+├── firebase_options.dart
+├── models/       # Firestore and application data models
+├── providers/    # Provider state management
+├── screens/      # Authentication, customer, pharmacy, and admin screens
+├── services/     # Authentication, Firestore, storage, location, and AI services
+├── utils/        # Constants, validators, and helper functions
+└── widgets/      # Reusable UI components
+
+functions/        # Firebase Cloud Functions
+firestore.rules   # Firestore security rules
+storage.rules     # Firebase Storage security rules
+```
+
+## Testing and analysis
+
+Run the available checks with:
+
+```bash
+flutter analyze
+flutter test
+```
+
+## Security
+
+- Keep Firebase and Groq credentials out of source control.
+- Use the provided Firestore and Storage rules in deployed environments.
+- Review Firebase Authentication, Firestore, Storage, Maps, and Groq usage limits before production deployment.
+
+## License
+
+This project does not currently include a license file. Add a license before distributing or reusing the project publicly.
