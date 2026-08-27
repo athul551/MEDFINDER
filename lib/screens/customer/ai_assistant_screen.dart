@@ -1,21 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../models/chat_message.dart';
+import '../../providers/app_auth_provider.dart';
 import '../../services/ai_assistant_service.dart';
 import '../../services/firestore_service.dart';
 import 'customer_ui.dart';
-
-class ChatMessage {
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    this.isError = false,
-  });
-
-  final String text;
-  final bool isUser;
-  final bool isError;
-}
 
 class AIAssistantScreen extends StatefulWidget {
   const AIAssistantScreen({super.key});
@@ -30,6 +20,28 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
   final List<ChatMessage> _messages = [];
   bool _isLoading = false;
   String? _errorMessage;
+  bool _historyLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadHistory());
+  }
+
+  Future<void> _loadHistory() async {
+    final user = context.read<AppAuthProvider>().appUser;
+    if (user == null || _historyLoaded) return;
+    _historyLoaded = true;
+    try {
+      final history = await context.read<FirestoreService>().getChatHistory(user.uid);
+      if (!mounted) return;
+      setState(() => _messages.addAll(history));
+      await _scrollToBottom();
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _errorMessage = 'Could not load saved chat history.');
+    }
+  }
 
   @override
   void dispose() {
@@ -68,6 +80,18 @@ class _AIAssistantScreenState extends State<AIAssistantScreen> {
       setState(() {
         _messages.add(ChatMessage(text: answer, isUser: false));
       });
+      final user = context.read<AppAuthProvider>().appUser;
+      if (user != null) {
+        final firestore = context.read<FirestoreService>();
+        await firestore.saveChatMessage(
+          user.uid,
+          ChatMessage(text: question, isUser: true),
+        );
+        await firestore.saveChatMessage(
+          user.uid,
+          ChatMessage(text: answer, isUser: false),
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {

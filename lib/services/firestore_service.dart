@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
 
 import '../models/app_notification.dart';
 import '../models/app_user.dart';
+import '../models/chat_message.dart';
 import '../models/medicine.dart';
 import '../models/medicine_subscription.dart';
 import '../models/pharmacy.dart';
@@ -20,6 +21,8 @@ class FirestoreService {
 
   CollectionReference<Map<String, dynamic>> get _users =>
       _db.collection(AppCollections.users);
+  CollectionReference<Map<String, dynamic>> _aiChatMessages(String userId) =>
+      _users.doc(userId).collection(AppCollections.aiChatMessages);
   CollectionReference<Map<String, dynamic>> get _pharmacies =>
       _db.collection(AppCollections.pharmacies);
   CollectionReference<Map<String, dynamic>> get _medicines =>
@@ -74,7 +77,29 @@ class FirestoreService {
       references.add(doc.reference);
     }
 
+    final chatMessages = await _aiChatMessages(userId).get();
+    for (final doc in chatMessages.docs) {
+      references.add(doc.reference);
+    }
+
     await _deleteDocumentReferences(references);
+  }
+
+  Future<List<ChatMessage>> getChatHistory(String userId) async {
+    final snapshot = await _aiChatMessages(userId).get();
+    final messages = snapshot.docs
+        .map((doc) => ChatMessage.fromMap(doc.data()))
+        .where((message) => message.text.isNotEmpty)
+        .toList();
+    messages.sort(
+      (a, b) => (a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0))
+          .compareTo(b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0)),
+    );
+    return messages;
+  }
+
+  Future<void> saveChatMessage(String userId, ChatMessage message) {
+    return _aiChatMessages(userId).add(message.toMap());
   }
 
   Stream<List<AppUser>> watchUsers() {

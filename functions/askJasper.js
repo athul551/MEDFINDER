@@ -1,3 +1,5 @@
+require("dotenv").config({path: ".env.local"});
+
 const {onCall} = require("firebase-functions/v2/https");
 const {getFirestore, FieldValue} = require("firebase-admin/firestore");
 const {GoogleGenerativeAI} = require("@google/generative-ai");

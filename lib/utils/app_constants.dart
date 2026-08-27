@@ -106,6 +106,7 @@ class AppColors {
 
 class AppCollections {
   static const users = 'users';
+  static const aiChatMessages = 'aiChatMessages';
   static const pharmacies = 'pharmacies';
   static const medicines = 'medicines';
   static const stock = 'stock';
