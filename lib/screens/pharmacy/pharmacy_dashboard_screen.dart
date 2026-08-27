@@ -91,10 +91,53 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
   }
 }
 
-class _StockOverview extends StatelessWidget {
+class _StockOverview extends StatefulWidget {
   const _StockOverview({required this.pharmacy});
 
   final Pharmacy pharmacy;
+
+  @override
+  State<_StockOverview> createState() => _StockOverviewState();
+}
+
+class _StockOverviewState extends State<_StockOverview> {
+  List<Reservation> _reservations = [];
+  List<StockItem> _initialStock = [];
+  bool _loadingReservations = true;
+
+  Pharmacy get pharmacy => widget.pharmacy;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    await Future.wait([
+      _loadReservations(),
+      _loadStock(),
+    ]);
+  }
+
+  Future<void> _loadReservations() async {
+    setState(() => _loadingReservations = true);
+    try {
+      final data = await context
+          .read<FirestoreService>()
+          .getReservationsForPharmacy(pharmacy.pharmacyId);
+      if (mounted) setState(() => _reservations = data);
+    } finally {
+      if (mounted) setState(() => _loadingReservations = false);
+    }
+  }
+
+  Future<void> _loadStock() async {
+    final data = await context
+        .read<FirestoreService>()
+        .getStockForPharmacy(pharmacy.pharmacyId);
+    if (mounted) setState(() => _initialStock = data);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -139,109 +182,25 @@ class _StockOverview extends StatelessWidget {
         ],
       ),
       body: CustomerScreenBackground(
-        child: StreamBuilder<List<StockItem>>(
-          stream: context.read<FirestoreService>().watchStockForPharmacy(
-                pharmacy.pharmacyId,
-              ),
-          builder: (context, snapshot) {
-            if (snapshot.hasError) {
-              return EmptyState(
-                icon: Icons.error_outline,
-                title: 'Unable to load stock',
-                message: snapshot.error.toString(),
-              );
-            }
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const LoadingView(message: 'Loading dashboard...');
-            }
-            final stock = snapshot.data ?? [];
-            return ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-              children: [
-                AnimatedStaggerItem(
-                  delay: 0,
-                  child: _PharmacyHeaderCard(pharmacy: pharmacy, stockCount: stock.length),
-                ),
-                const SizedBox(height: 20),
-                AnimatedStaggerItem(
-                  delay: 100,
-                  child: _DashboardStats(stock: stock),
-                ),
-                const SizedBox(height: 20),
-                AnimatedStaggerItem(
-                  delay: 150,
-                  child: _DashboardAnalytics(pharmacy: pharmacy, stock: stock),
-                ),
-                const SizedBox(height: 20),
-                AnimatedStaggerItem(
-                  delay: 180,
-                  child: _DeliverySettingsCard(pharmacy: pharmacy),
-                ),
-                const SizedBox(height: 24),
-                const AnimatedStaggerItem(
-                  delay: 200,
-                  child: CustomerSectionHeader(title: 'Medicine Stock'),
-                ),
-                const SizedBox(height: 12),
-                if (stock.isEmpty)
-                  const AnimatedStaggerItem(
-                    delay: 250,
-                    child: EmptyState(
-                      icon: Icons.inventory_2_outlined,
-                      title: 'No stock added',
-                      message: 'Add your first medicine to start receiving reservations.',
-                    ),
-                  )
-                else
-                  ...stock.asMap().entries.map(
-                        (entry) => Padding(
-                          padding: const EdgeInsets.only(bottom: 2),
-                          child: AnimatedStaggerItem(
-                            delay: 250 + entry.key * 50,
-                            child: AnimatedPressScale(
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => AddEditMedicineScreen(
-                                    pharmacy: pharmacy,
-                                    stockItem: entry.value,
-                                  ),
-                                ),
-                              ),
-                              child: StockCard(
-                                stock: entry.value,
-                                trailing: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit_outlined),
-                                      tooltip: 'Edit stock',
-                                      onPressed: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => AddEditMedicineScreen(
-                                            pharmacy: pharmacy,
-                                            stockItem: entry.value,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    Switch(
-                                      value: entry.value.isAvailable,
-                                      onChanged: (value) => context
-                                          .read<PharmacyProvider>()
-                                          .setAvailability(entry.value.stockId, value),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-              ],
-            );
-          },
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+          children: [
+            _PharmacyHeaderCard(pharmacy: pharmacy, stockCount: _initialStock.length),
+            const SizedBox(height: 20),
+            _DashboardStats(stock: _initialStock),
+            const SizedBox(height: 20),
+            _DashboardAnalytics(
+              reservations: _reservations,
+              loading: _loadingReservations,
+              stock: _initialStock,
+            ),
+            const SizedBox(height: 20),
+            _DeliverySettingsCard(pharmacy: pharmacy),
+            const SizedBox(height: 24),
+            const CustomerSectionHeader(title: 'Medicine Stock'),
+            const SizedBox(height: 12),
+            _StockListSection(pharmacy: pharmacy),
+          ],
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -294,6 +253,83 @@ class _StockOverview extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _StockItemCard extends StatelessWidget {
+  const _StockItemCard({required this.entry, required this.pharmacy});
+
+  final StockItem entry;
+  final Pharmacy pharmacy;
+
+  @override
+  Widget build(BuildContext context) {
+    return StockCard(
+      stock: entry,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Edit stock',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AddEditMedicineScreen(
+                  pharmacy: pharmacy,
+                  stockItem: entry,
+                ),
+              ),
+            ),
+          ),
+          Switch(
+            value: entry.isAvailable,
+            onChanged: (value) =>
+                context.read<PharmacyProvider>().setAvailability(entry.stockId, value),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StockListSection extends StatelessWidget {
+  const _StockListSection({required this.pharmacy});
+
+  final Pharmacy pharmacy;
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<StockItem>>(
+      stream: context.read<FirestoreService>().watchStockForPharmacy(
+            pharmacy.pharmacyId,
+          ),
+      builder: (context, snapshot) {
+        final stock = snapshot.data ?? [];
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (stock.isEmpty) {
+          return const EmptyState(
+            icon: Icons.inventory_2_outlined,
+            title: 'No stock added',
+            message: 'Add your first medicine to start receiving reservations.',
+          );
+        }
+        return Column(
+          children: [
+            for (final entry in stock)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 2),
+                child: _StockItemCard(entry: entry, pharmacy: pharmacy),
+              ),
+          ],
+        );
+      },
     );
   }
 }
@@ -472,80 +508,85 @@ class _DashboardStats extends StatelessWidget {
 }
 
 class _DashboardAnalytics extends StatelessWidget {
-  const _DashboardAnalytics({required this.pharmacy, required this.stock});
+  const _DashboardAnalytics({
+    required this.reservations,
+    required this.loading,
+    required this.stock,
+  });
 
-  final Pharmacy pharmacy;
+  final List<Reservation> reservations;
+  final bool loading;
   final List<StockItem> stock;
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<Reservation>>(
-      stream: context.read<FirestoreService>().watchReservationsForPharmacy(
-            pharmacy.pharmacyId,
+    if (loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (reservations.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+
+    final todayReservations = reservations.where((r) =>
+        r.reservedAt.isAfter(todayStart) &&
+        r.status == ReservationStatus.pickedUp).toList();
+
+    final pickedUp = reservations
+        .where((r) => r.status == ReservationStatus.pickedUp)
+        .toList();
+
+    final dailyCount = todayReservations.length;
+
+    final lowStockItems = stock.where((s) => s.isLowStock).toList();
+
+    double revenue = 0;
+    for (final r in pickedUp) {
+      final item = stock.where((s) =>
+          s.medicineName.toLowerCase() == r.medicineName.toLowerCase()).firstOrNull;
+      if (item != null) {
+        revenue += item.price * r.quantity;
+      }
+    }
+
+    final medicineSales = <String, int>{};
+    for (final r in pickedUp) {
+      medicineSales.update(r.medicineName, (v) => v + r.quantity,
+          ifAbsent: () => r.quantity);
+    }
+    final sortedMedicines = medicineSales.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    final topMedicines = sortedMedicines.take(5).toList();
+
+    final weekDays = <String, int>{};
+    for (int i = 6; i >= 0; i--) {
+      final day = DateTime(now.year, now.month, now.day - i);
+      final label = _dayLabel(day);
+      weekDays[label] = 0;
+    }
+    for (final r in reservations.where(
+        (r) => r.status == ReservationStatus.pickedUp)) {
+      final diff = now.difference(r.reservedAt).inDays;
+      if (diff >= 0 && diff <= 6) {
+        final label = _dayLabel(r.reservedAt);
+        weekDays[label] = (weekDays[label] ?? 0) + r.quantity;
+      }
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withAlpha((0.94 * 255).round()),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.teal.shade900.withAlpha((0.07 * 255).round()),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
-      builder: (context, snapshot) {
-        final reservations = snapshot.data ?? [];
-
-        final now = DateTime.now();
-        final todayStart = DateTime(now.year, now.month, now.day);
-
-        final todayReservations = reservations.where((r) =>
-            r.reservedAt.isAfter(todayStart) &&
-            r.status == ReservationStatus.pickedUp).toList();
-
-        final pickedUp = reservations
-            .where((r) => r.status == ReservationStatus.pickedUp)
-            .toList();
-
-        final dailyCount = todayReservations.length;
-
-        final lowStockItems = stock.where((s) => s.isLowStock).toList();
-
-        double revenue = 0;
-        for (final r in pickedUp) {
-          final item = stock.where((s) =>
-              s.medicineName.toLowerCase() == r.medicineName.toLowerCase()).firstOrNull;
-          if (item != null) {
-            revenue += item.price * r.quantity;
-          }
-        }
-
-        final medicineSales = <String, int>{};
-        for (final r in pickedUp) {
-          medicineSales.update(r.medicineName, (v) => v + r.quantity,
-              ifAbsent: () => r.quantity);
-        }
-        final sortedMedicines = medicineSales.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
-        final topMedicines = sortedMedicines.take(5).toList();
-
-        final weekDays = <String, int>{};
-        for (int i = 6; i >= 0; i--) {
-          final day = DateTime(now.year, now.month, now.day - i);
-          final label = _dayLabel(day);
-          weekDays[label] = 0;
-        }
-        for (final r in reservations.where(
-            (r) => r.status == ReservationStatus.pickedUp)) {
-          final diff = now.difference(r.reservedAt).inDays;
-          if (diff >= 0 && diff <= 6) {
-            final label = _dayLabel(r.reservedAt);
-            weekDays[label] = (weekDays[label] ?? 0) + r.quantity;
-          }
-        }
-
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white.withAlpha((0.94 * 255).round()),
-            borderRadius: BorderRadius.circular(24),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.teal.shade900.withAlpha((0.07 * 255).round()),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
+        ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -643,8 +684,6 @@ class _DashboardAnalytics extends StatelessWidget {
             ],
           ),
         );
-      },
-    );
   }
 
   String _dayLabel(DateTime day) {
@@ -979,7 +1018,8 @@ class _DeliverySettingsCardState extends State<_DeliverySettingsCard> {
               ),
               Switch(
                 value: _deliveryAvailable,
-                activeColor: Colors.teal,
+                activeTrackColor: Colors.teal.shade200,
+                activeThumbColor: Colors.teal,
                 onChanged: (v) => setState(() => _deliveryAvailable = v),
               ),
             ],

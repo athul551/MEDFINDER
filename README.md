@@ -103,10 +103,12 @@ In Firebase Console:
 
 ### 3. API Keys
 
-**Gemini AI Key** (optional — falls back to rule-based responses):
+**Groq AI Key** (optional — falls back to a configuration message):
 ```bash
-flutter run --dart-define=GEMINI_API_KEY=your_key_here
+flutter run --dart-define=GROQ_API_KEY=your_key_here
 ```
+
+The app also loads `GROQ_API_KEY` from the local `.env` file. Restart the app after changing it.
 
 **Google Maps Key** (required for map view on mobile):
 - Android: `android/app/src/main/AndroidManifest.xml` — meta-data `com.google.android.geo.API_KEY`

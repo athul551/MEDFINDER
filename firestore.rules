@@ -127,5 +127,23 @@ service cloud.firestore {
       allow delete: if signedIn()
         && resource.data.userId == request.auth.uid;
     }
+
+    match /transactions/{transactionId} {
+      allow read: if signedIn()
+        && (resource.data.userId == request.auth.uid
+            || ownsPharmacy(resource.data.pharmacyId));
+      allow create: if isCustomer()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /payouts/{payoutId} {
+      allow read: if signedIn()
+        && ownsPharmacy(resource.data.pharmacyId);
+      allow create: if isPharmacyOwner();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
   }
 }

@@ -55,6 +55,13 @@ class ReservationCard extends StatelessWidget {
         _InfoRow(icon: Icons.store_outlined, text: 'Pharmacy: ${reservation.pharmacyName}'),
         const SizedBox(height: 6),
         _InfoRow(icon: Icons.production_quantity_limits_outlined, text: 'Quantity: ${reservation.quantity}'),
+        if (reservation.totalAmount > 0) ...[
+          const SizedBox(height: 6),
+          _InfoRow(
+            icon: Icons.currency_rupee_outlined,
+            text: 'Total: ₹${reservation.totalAmount.toStringAsFixed(0)}',
+          ),
+        ],
         const SizedBox(height: 6),
         if (reservation.isDelivery) ...[
           _InfoRow(

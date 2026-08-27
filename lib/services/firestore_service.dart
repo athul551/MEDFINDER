@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' hide Transaction;
 
 import '../models/app_notification.dart';
 import '../models/app_user.dart';
@@ -268,6 +268,17 @@ class FirestoreService {
     });
   }
 
+  Future<List<StockItem>> getStockForPharmacy(String pharmacyId) async {
+    final snapshot = await _stock
+        .where('pharmacyId', isEqualTo: pharmacyId)
+        .get();
+    final stock = snapshot.docs
+        .map((doc) => StockItem.fromMap(doc.data(), id: doc.id))
+        .toList();
+    stock.sort((a, b) => a.medicineName.compareTo(b.medicineName));
+    return stock;
+  }
+
   Stream<List<StockItem>> searchStockByMedicineName(String query) {
     final normalized = query.trim().toLowerCase();
     return _stock.orderBy('medicineName').snapshots().asyncMap((snapshot) {
@@ -349,6 +360,8 @@ class FirestoreService {
       deliveryAddress: reservation.deliveryAddress,
       deliveryFee: reservation.deliveryFee,
       deliveryNotes: reservation.deliveryNotes,
+      unitPrice: reservation.unitPrice,
+      totalAmount: reservation.totalAmount,
     );
     await doc.set(saved.toMap());
     final msg = saved.isDelivery
@@ -427,6 +440,17 @@ class FirestoreService {
       reservations.sort((a, b) => b.reservedAt.compareTo(a.reservedAt));
       return reservations;
     });
+  }
+
+  Future<List<Reservation>> getReservationsForPharmacy(String pharmacyId) async {
+    final snapshot = await _reservations
+        .where('pharmacyId', isEqualTo: pharmacyId)
+        .get();
+    final reservations = snapshot.docs
+        .map((doc) => Reservation.fromMap(doc.data(), id: doc.id))
+        .toList();
+    reservations.sort((a, b) => b.reservedAt.compareTo(a.reservedAt));
+    return reservations;
   }
 
   Stream<List<Reservation>> watchAllReservations() {

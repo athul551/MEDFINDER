@@ -91,6 +91,12 @@ class _ReservationScreenState extends State<ReservationScreen> {
     if (bytes != null) setState(() => _prescriptionBytes = bytes);
   }
 
+  double get _subtotal => widget.stock.price * int.parse(
+        _quantityController.text.isEmpty ? '1' : _quantityController.text,
+      );
+  double get _deliveryFee => _isDelivery ? widget.pharmacy.deliveryFee : 0;
+  double get _totalAmount => _subtotal + _deliveryFee;
+
   Future<void> _reserve() async {
     if (!_formKey.currentState!.validate()) return;
     final user = context.read<AppAuthProvider>().appUser;
@@ -123,13 +129,13 @@ class _ReservationScreenState extends State<ReservationScreen> {
         deliveryFee: _isDelivery ? widget.pharmacy.deliveryFee : null,
         deliveryNotes:
             _isDelivery ? _notesController.text.trim() : null,
+        unitPrice: widget.stock.price,
+        totalAmount: _totalAmount,
       );
       final reservationId = await firestore.createReservation(reservation);
+      if (!mounted) return;
+
       if (mounted) {
-        final msg = _isDelivery
-            ? 'Delivery request sent.'
-            : 'Reservation request sent.';
-        showAppSnackBar(context, msg);
         final shouldReview = await showDialog<bool>(
           context: context,
           builder: (dialogContext) => AlertDialog(
@@ -275,30 +281,6 @@ class _ReservationScreenState extends State<ReservationScreen> {
                         ),
                       ),
                     ],
-                    if (_isDelivery && widget.pharmacy.deliveryFee > 0) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.teal.withAlpha((0.08 * 255).round()),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline,
-                                size: 18, color: Colors.teal.shade700),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Delivery fee: ₹${widget.pharmacy.deliveryFee.toStringAsFixed(0)}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w600,
-                                color: Colors.teal.shade700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -322,6 +304,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
                       controller: _quantityController,
                       label: 'Quantity',
                       keyboardType: TextInputType.number,
+                      onChanged: (_) => setState(() {}),
                       validator: (value) =>
                           Validators.positiveNumber(value, label: 'Quantity'),
                     ),
@@ -410,7 +393,7 @@ class _ReservationScreenState extends State<ReservationScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Prescription',
+                      'Prescription (optional)',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
@@ -445,6 +428,43 @@ class _ReservationScreenState extends State<ReservationScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 20),
+              CustomerSurfaceCard(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Price Breakdown',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.teal.shade900,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    _PriceLine(
+                      label: '₹${widget.stock.price.toStringAsFixed(0)} × ${_quantityController.text.isEmpty ? '1' : _quantityController.text}',
+                      value: '₹${_subtotal.toStringAsFixed(0)}',
+                    ),
+                    if (_deliveryFee > 0) ...[
+                      const SizedBox(height: 8),
+                      _PriceLine(
+                        label: 'Delivery fee',
+                        value: '₹${_deliveryFee.toStringAsFixed(0)}',
+                      ),
+                    ],
+                    const Divider(height: 24),
+                    _PriceLine(
+                      label: 'Total',
+                      value: '₹${_totalAmount.toStringAsFixed(0)}',
+                      isBold: true,
+                      isLarge: true,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
               const SizedBox(height: 24),
               AppButton(
                 label: _isDelivery ? 'Request delivery' : 'Confirm reservation',
@@ -510,6 +530,45 @@ class _MethodButton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PriceLine extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isBold;
+  final bool isLarge;
+
+  const _PriceLine({
+    required this.label,
+    required this.value,
+    this.isBold = false,
+    this.isLarge = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: isLarge ? 16 : 13,
+            fontWeight: isBold ? FontWeight.w600 : FontWeight.normal,
+            color: Colors.grey.shade700,
+          ),
+        ),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: isLarge ? 18 : 14,
+            fontWeight: isBold ? FontWeight.w700 : FontWeight.w500,
+            color: Colors.grey.shade900,
+          ),
+        ),
+      ],
     );
   }
 }

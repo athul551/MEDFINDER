@@ -10,6 +10,7 @@ class AppTextField extends StatelessWidget {
     this.obscureText = false,
     this.maxLines = 1,
     this.prefixIcon,
+    this.onChanged,
   });
 
   final TextEditingController controller;
@@ -19,6 +20,7 @@ class AppTextField extends StatelessWidget {
   final bool obscureText;
   final int maxLines;
   final IconData? prefixIcon;
+  final void Function(String)? onChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +30,7 @@ class AppTextField extends StatelessWidget {
       keyboardType: keyboardType,
       obscureText: obscureText,
       maxLines: maxLines,
+      onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),

@@ -1,4 +1,7 @@
-import 'package:google_generative_ai/google_generative_ai.dart';
+import 'dart:convert';
+
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
 
 import '../models/pharmacy.dart';
 import '../models/stock_item.dart';
@@ -8,11 +11,14 @@ class AIAssistantService {
   AIAssistantService({FirestoreService? firestoreService})
       : _firestoreService = firestoreService ?? FirestoreService();
 
-  static const _apiKey = String.fromEnvironment('GEMINI_API_KEY');
-
   final FirestoreService _firestoreService;
 
-  bool get _hasApiKey => _apiKey.trim().isNotEmpty;
+    static const _definedApiKey = String.fromEnvironment('GROQ_API_KEY');
+
+    String get _apiKey =>
+      (dotenv.env['GROQ_API_KEY'] ?? _definedApiKey).trim();
+
+  bool get _hasApiKey => _apiKey.isNotEmpty;
 
   Future<String> answerQuestion(String question) async {
     final prompt = question.trim();
@@ -20,29 +26,70 @@ class AIAssistantService {
       return 'Ask Jasper a question such as "Where can I find Dolo 650?" or "Which pharmacy near me has insulin?"';
     }
 
-    final stocks = await _retrieveRelevantStock(prompt);
-    final pharmacyIds = stocks.map((stock) => stock.pharmacyId).toSet().toList();
-    final pharmacies = await _firestoreService.getPharmaciesByIds(pharmacyIds);
+    var stocks = <StockItem>[];
+    var pharmacies = <Pharmacy>[];
+    if (_isAvailabilityQuestion(prompt)) {
+      try {
+        stocks = await _retrieveRelevantStock(prompt);
+        final pharmacyIds = stocks.map((stock) => stock.pharmacyId).toSet().toList();
+        pharmacies = await _firestoreService.getPharmaciesByIds(pharmacyIds);
+      } catch (_) {
+        // The AI can still answer when the store lookup is unavailable.
+      }
+    }
 
     if (!_hasApiKey) {
-      return _buildFallbackAnswer(prompt, stocks, pharmacies);
+      return 'Jasper is not configured with a Groq API key. Add GROQ_API_KEY to .env and restart the app.';
     }
 
     try {
-      final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
-        apiKey: _apiKey,
+      final response = await http.post(
+        Uri.parse('https://api.groq.com/openai/v1/chat/completions'),
+        headers: {
+          'Authorization': 'Bearer $_apiKey',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'model': dotenv.env['GROQ_MODEL']?.trim() ?? 'openai/gpt-oss-120b',
+          'messages': [
+            {'role': 'user', 'content': _buildGroqPrompt(prompt, stocks, pharmacies)},
+          ],
+          'temperature': 0.3,
+        }),
       );
-      final geminiPrompt = _buildGeminiPrompt(prompt, stocks, pharmacies);
-      final response = await model.generateContent([Content.text(geminiPrompt)]);
-      final text = response.text;
-      if (text == null || text.trim().isEmpty) {
-        return _buildFallbackAnswer(prompt, stocks, pharmacies);
+
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return 'Jasper could not reach the AI service right now. Please try again shortly.';
       }
-      return text.trim();
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final choices = body['choices'] as List<dynamic>?;
+      final message = choices?.firstOrNull as Map<String, dynamic>?;
+      final text = (message?['message'] as Map<String, dynamic>?)?['content'] as String?;
+      if (text == null || text.trim().isEmpty) {
+        return 'Jasper received an empty answer. Please try asking that another way.';
+      }
+      return _toPlainEnglish(text);
     } catch (error) {
-      return _buildFallbackAnswer(prompt, stocks, pharmacies);
+      return 'Jasper could not answer right now. Check your internet connection and try again.';
     }
+  }
+
+  bool _isAvailabilityQuestion(String question) {
+    const keywords = [
+      'available',
+      'availability',
+      'pharmacy',
+      'chemist',
+      'stock',
+      'in store',
+      'near me',
+      'find',
+      'buy',
+      'where can i get',
+    ];
+    final normalized = question.toLowerCase();
+    return keywords.any(normalized.contains);
   }
 
   Future<List<StockItem>> _retrieveRelevantStock(String question) async {
@@ -68,7 +115,7 @@ class AIAssistantService {
     return stockItems.toList();
   }
 
-  String _buildGeminiPrompt(
+  String _buildGroqPrompt(
     String question,
     List<StockItem> stocks,
     List<Pharmacy> pharmacies,
@@ -96,25 +143,20 @@ class AIAssistantService {
     }
 
     buffer.writeln();
-    buffer.writeln('Write a concise, friendly, and helpful answer as Jasper.');
+    buffer.writeln('Write a concise, friendly, helpful answer as Jasper in normal plain English.');
+    buffer.writeln('Do not use Markdown, bullet symbols, headings, bold text, tables, or code formatting.');
     return buffer.toString();
   }
 
-  String _buildFallbackAnswer(
-    String question,
-    List<StockItem> stocks,
-    List<Pharmacy> pharmacies,
-  ) {
-    if (stocks.isEmpty) {
-      return 'Jasper could not find a matching available medicine for "$question". Please try again later or adjust the medicine name.';
-    }
-
-    final pharmacyMap = {for (var pharmacy in pharmacies) pharmacy.pharmacyId: pharmacy};
-    final lines = stocks.take(5).map((stock) {
-      final pharmacy = pharmacyMap[stock.pharmacyId];
-      return '${stock.medicineName} is available at ${pharmacy?.name ?? 'a nearby pharmacy'} (${pharmacy?.address ?? 'address unknown'}) with ${stock.quantity} unit(s) in stock.';
-    }).join(' ');
-
-    return 'Here is what I found: $lines';
+  String _toPlainEnglish(String text) {
+    return text
+        .replaceAll(RegExp(r'```[^\n]*'), '')
+        .replaceAll(RegExp(r'[`*_#>]'), '')
+        .replaceAll(RegExp(r'^\s*[-+]\s+', multiLine: true), '')
+        .replaceAll(RegExp(r'^\s*\d+[.)]\s+', multiLine: true), '')
+        .replaceAll(RegExp(r'\[([^\]]+)\]\([^)]*\)'), r'\$1')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .trim();
   }
+
 }

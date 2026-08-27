@@ -19,6 +19,8 @@ class Reservation {
     this.deliveryAddress,
     this.deliveryFee,
     this.deliveryNotes,
+    this.unitPrice = 0,
+    this.totalAmount = 0,
   });
 
   final String reservationId;
@@ -36,6 +38,8 @@ class Reservation {
   final String? deliveryAddress;
   final double? deliveryFee;
   final String? deliveryNotes;
+  final double unitPrice;
+  final double totalAmount;
 
   factory Reservation.fromMap(Map<String, dynamic> map, {String? id}) {
     return Reservation(
@@ -54,6 +58,8 @@ class Reservation {
       deliveryAddress: map['deliveryAddress'] as String?,
       deliveryFee: (map['deliveryFee'] as num?)?.toDouble(),
       deliveryNotes: map['deliveryNotes'] as String?,
+      unitPrice: (map['unitPrice'] as num?)?.toDouble() ?? 0,
+      totalAmount: (map['totalAmount'] as num?)?.toDouble() ?? 0,
     );
   }
 
@@ -74,6 +80,8 @@ class Reservation {
       'deliveryAddress': deliveryAddress,
       'deliveryFee': deliveryFee,
       'deliveryNotes': deliveryNotes,
+      'unitPrice': unitPrice,
+      'totalAmount': totalAmount,
     };
   }
 }
